@@ -2,6 +2,8 @@
 #![deny(warnings)]
 use zeroize::{Zeroize, ZeroizeOnDrop};
 mod ml_kem;
+mod auxiliary_algorithms;
+mod k_pke;
 
 pub const N: u32 = 11;
 pub const Q: u32 = 12;
@@ -25,7 +27,7 @@ macro_rules! functionality {
 
         pub fn key_gen() -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            ml_kem::key_gen(K, ETA1, &mut ek.0, &mut dk.0);
+            ml_kem::key_gen::<K>(K, ETA1, &mut ek.0, &mut dk.0);
             (ek, dk)
         }
 
@@ -74,7 +76,7 @@ macro_rules! functionality {
 pub mod ml_kem_512 {
     use crate::{ml_kem, SharedSecretKey};
 
-    const K: u32 = 2;
+    const K: usize = 2;
     const ETA1: u32 = 3;
     const ETA2: u32 = 2;
     const DU: u32 = 10;
@@ -89,7 +91,7 @@ pub mod ml_kem_512 {
 pub mod ml_kem_768 {
     use crate::{ml_kem, SharedSecretKey};
 
-    const K: u32 = 3;
+    const K: usize = 3;
     const ETA1: u32 = 2;
     const ETA2: u32 = 2;
     const DU: u32 = 10;
@@ -104,7 +106,7 @@ pub mod ml_kem_768 {
 pub mod ml_kem_1024 {
     use crate::{ml_kem, SharedSecretKey};
 
-    const K: u32 = 4;
+    const K: usize = 4;
     const ETA1: u32 = 2;
     const ETA2: u32 = 2;
     const DU: u32 = 11;
