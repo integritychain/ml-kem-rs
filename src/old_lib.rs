@@ -1,3 +1,6 @@
+//use crate::auxiliary_algorithms::{g, prf};
+
+
 /// Implements <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
 
 // TODO: Need to add zeroization (?)
@@ -67,6 +70,7 @@ pub fn byte_encode<const D: u32, const Q: u32>(integer_array: [Z256; 256]) -> Ve
 /// # Panics
 /// Will panic if D is outside of 1..12, or if `byte_array` length is not 32*D
 #[must_use]
+#[allow(dead_code)]
 pub fn byte_decode<const D: usize, const Q: u32>(byte_array: &[u8]) -> Vec<Z256> {
     // TODO: We know output size
     assert!((1 <= D) & (D <= 12));
@@ -194,6 +198,7 @@ pub fn ntt(integer_array: &[Z256; 256]) -> [Z256; 256] {
 /// # Panics
 /// blah blah
 #[must_use]
+#[allow(dead_code)]
 pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
     let mut f: [Z256; 256] = [0; 256];
     f.copy_from_slice(f_hat);
@@ -247,115 +252,113 @@ pub fn base_case_multiply(a0: Z256, a1: Z256, b0: Z256, b1: Z256, gamma: Z256) -
     (c0 as Z256, c1 as Z256)
 }
 
-use sha3::{
-    digest::{ExtendableOutput, Update, XofReader},
-    Digest, Sha3_512, Shake128, Shake256,
-};
+use sha3::digest::XofReader; //, Digest, Sha3_512, Shake128, Shake256;
 
 /// XOF
-fn xof(rho: &[u8; 32], i: u8, j: u8) -> impl XofReader {
-    let mut hasher = Shake128::default();
-    hasher.update(rho);
-    hasher.update(&[i]);
-    hasher.update(&[j]);
-    let reader = hasher.finalize_xof();
-    reader
-}
+// fn xof(rho: &[u8; 32], i: u8, j: u8) -> impl XofReader {
+//     let mut hasher = Shake128::default();
+//     hasher.update(rho);
+//     hasher.update(&[i]);
+//     hasher.update(&[j]);
+//     let reader = hasher.finalize_xof();
+//     reader
+// }
 
-use rand::Rng;
+//use rand::Rng;
+//use crate::auxiliary_algorithms::xof;
 
 /// Function G from line 746 on page 17
-fn g(bytes: &[u8]) -> ([u8; 32], [u8; 32]) {
-    let mut hasher = Sha3_512::new();
-    Digest::update(&mut hasher, bytes);
-    let digest = hasher.finalize();
-    let mut a = [0u8; 32];
-    let mut b = [0u8; 32];
-    a.copy_from_slice(&digest[0..32]);
-    b.copy_from_slice(&digest[32..64]);
-    (a, b)
-}
+// fn g(bytes: &[u8]) -> ([u8; 32], [u8; 32]) {
+//     let mut hasher = Sha3_512::new();
+//     Digest::update(&mut hasher, bytes);
+//     let digest = hasher.finalize();
+//     let mut a = [0u8; 32];
+//     let mut b = [0u8; 32];
+//     a.copy_from_slice(&digest[0..32]);
+//     b.copy_from_slice(&digest[32..64]);
+//     (a, b)
+// }
 
 /// Function PRF on line 726 of page 16  TODO:hardcode N1 to 2
-fn prf<const N1: usize>(s: &[u8; 32], b: u8) -> [u8; 64 * 2] {
-    let mut hasher = Shake256::default();
-    hasher.update(s);
-    hasher.update(&[b]);
-    let mut reader = hasher.finalize_xof();
-    let mut result = [0u8; 64 * 2];
-    reader.read(&mut result);
-    result
-}
+// fn prf<const N1: usize>(s: &[u8; 32], b: u8) -> [u8; 64 * 2] {
+//     let mut hasher = Shake256::default();
+//     hasher.update(s);
+//     hasher.update(&[b]);
+//     let mut reader = hasher.finalize_xof();
+//     let mut result = [0u8; 64 * 2];
+//     reader.read(&mut result);
+//     result
+// }
 
 /// Algorithm 12 page 26 TODO: 2 is a placeholder for k
-pub fn k_pke_keygen() -> ([u8; 384 * 2 + 32], [u8; 384 * 2]) {
-    const K: usize = 2;
-    let mut ek_pke = [0u8; 384 * K + 32];
-    let mut dk_pke = [0u8; 384 * K];
-    let d = rand::thread_rng().gen::<[u8; 32]>();
-    let (rho, sigma) = g(&d);
-    let mut n = 0;
-    let mut a_hat: [[[Z256; 256]; K]; K] = [[[0; 256]; K]; K];
-    for i in 0..K {
-        for j in 0..K {
-            a_hat[i][j] = sample_ntt::<3329>(xof(&d, i.try_into().unwrap(), j.try_into().unwrap()));
-        }
-    }
-    let mut s: [[Z256; 256]; K] = [[0; 256]; K];
-    for i in 0..K {
-        s[i] = sample_poly_cbd::<2, 3379>(&prf::<2>(&sigma, n));
-        n += 1;
-    }
-    let mut e: [[Z256; 256]; K] = [[0; 256]; K];
-    for i in 0..K {
-        e[i] = sample_poly_cbd::<2, 3379>(&prf::<2>(&sigma, n));
-        n += 1;
-    }
-
-    let mut s_hat: [[Z256; 256]; 2] = [[0; 256]; 2];
-    for i in 0..2 {
-        s_hat[i] = ntt(&s[i]);
-    }
-    let mut e_hat: [[Z256; 256]; 2] = [[0; 256]; 2];
-    for i in 0..2 {
-        e_hat[i] = ntt(&e[i]);
-    }
-
-    let mut t_hat: [[Z256; 256]; 2] = [[0; 256]; 2];
-    for i in 0..2 {
-        for j in 0..2 {
-            for (t_ref, m_val) in t_hat[i]
-                .iter_mut()
-                .zip(multiply_ntts(&a_hat[i][j], &s_hat[j]))
-            {
-                *t_ref = *t_ref + m_val
-            }
-        }
-    }
-
-    for i in 0..2 {
-        for (t_ref, m_val) in t_hat[i].iter_mut().zip(&e_hat[i]) {
-            *t_ref = *t_ref + m_val
-        }
-    }
-
-    let mut ek = Vec::new();
-    for i in 0..2 {
-        let t = byte_encode::<12, 3379>(t_hat[i]);
-        ek.extend(t);
-    }
-    ek.extend(rho);
-
-    let mut dk = Vec::new();
-    for i in 0..2 {
-        let t = byte_encode::<12, 3379>(s[i]);
-        dk.extend(t);
-    }
-
-    ek_pke.copy_from_slice(&ek);
-    dk_pke.copy_from_slice(&dk);
-    (ek_pke, dk_pke)
-}
+// pub fn k_pke_keygen() -> ([u8; 384 * 2 + 32], [u8; 384 * 2]) {
+//     const K: usize = 2;
+//     let mut ek_pke = [0u8; 384 * K + 32];
+//     let mut dk_pke = [0u8; 384 * K];
+//     let d = rand::thread_rng().gen::<[u8; 32]>();
+//     let (rho, sigma) = g(&d);
+//     let mut n = 0;
+//     let mut a_hat: [[[Z256; 256]; K]; K] = [[[0; 256]; K]; K];
+//     for i in 0..K {
+//         for j in 0..K {
+//             a_hat[i][j] = sample_ntt::<3329>(xof(&d, i.try_into().unwrap(), j.try_into().unwrap()));
+//         }
+//     }
+//     let mut s: [[Z256; 256]; K] = [[0; 256]; K];
+//     for i in 0..K {
+//         s[i] = sample_poly_cbd::<2, 3379>(&prf::<2>(&sigma, n));
+//         n += 1;
+//     }
+//     let mut e: [[Z256; 256]; K] = [[0; 256]; K];
+//     for i in 0..K {
+//         e[i] = sample_poly_cbd::<2, 3379>(&prf::<2>(&sigma, n));
+//         n += 1;
+//     }
+//
+//     let mut s_hat: [[Z256; 256]; 2] = [[0; 256]; 2];
+//     for i in 0..2 {
+//         s_hat[i] = ntt(&s[i]);
+//     }
+//     let mut e_hat: [[Z256; 256]; 2] = [[0; 256]; 2];
+//     for i in 0..2 {
+//         e_hat[i] = ntt(&e[i]);
+//     }
+//
+//     let mut t_hat: [[Z256; 256]; 2] = [[0; 256]; 2];
+//     for i in 0..2 {
+//         for j in 0..2 {
+//             for (t_ref, m_val) in t_hat[i]
+//                 .iter_mut()
+//                 .zip(multiply_ntts(&a_hat[i][j], &s_hat[j]))
+//             {
+//                 *t_ref = *t_ref + m_val
+//             }
+//         }
+//     }
+//
+//     for i in 0..2 {
+//         for (t_ref, m_val) in t_hat[i].iter_mut().zip(&e_hat[i]) {
+//             *t_ref = *t_ref + m_val
+//         }
+//     }
+//
+//     let mut ek = Vec::new();
+//     for i in 0..2 {
+//         let t = byte_encode::<12, 3379>(t_hat[i]);
+//         ek.extend(t);
+//     }
+//     ek.extend(rho);
+//
+//     let mut dk = Vec::new();
+//     for i in 0..2 {
+//         let t = byte_encode::<12, 3379>(s[i]);
+//         dk.extend(t);
+//     }
+//
+//     ek_pke.copy_from_slice(&ek);
+//     dk_pke.copy_from_slice(&dk);
+//     (ek_pke, dk_pke)
+// }
 
 #[cfg(test)]
 mod tests {

@@ -1,9 +1,10 @@
 #![deny(clippy::pedantic)]
-#![deny(warnings)]
+//#![deny(warnings)]
 use zeroize::{Zeroize, ZeroizeOnDrop};
 mod ml_kem;
 mod auxiliary_algorithms;
 mod k_pke;
+mod old_lib;
 
 pub const N: u32 = 11;
 pub const Q: u32 = 12;

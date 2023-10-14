@@ -1,4 +1,4 @@
-use sha3::{Digest, Sha3_256, Sha3_512, Shake128};
+use sha3::{Digest, Sha3_256, Sha3_512, Shake128, Shake256};
 use sha3::digest::{ExtendableOutput, XofReader};
 use sha3::digest::Update;
 
@@ -35,12 +35,12 @@ pub(crate) fn g(bytes: &[u8]) -> ([u8; 32], [u8; 32]) {
 }
 //
 // /// Function PRF on line 726 of page 16  TODO:hardcode N1 to 2
-// fn prf<const N1: usize>(s: &[u8; 32], b: u8) -> [u8; 64 * 2] {
-//     let mut hasher = Shake256::default();
-//     hasher.update(s);
-//     hasher.update(&[b]);
-//     let mut reader = hasher.finalize_xof();
-//     let mut result = [0u8; 64 * 2];
-//     reader.read(&mut result);
-//     result
-// }
+pub fn prf<const N1: usize>(s: &[u8; 32], b: u8) -> [u8; 64 * 2] {
+    let mut hasher = Shake256::default();
+    hasher.update(s);
+    hasher.update(&[b]);
+    let mut reader = hasher.finalize_xof();
+    let mut result = [0u8; 64 * 2];
+    reader.read(&mut result);
+    result
+}
