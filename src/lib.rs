@@ -1,10 +1,17 @@
+// TODO
+//  - check naming convention for ntt
+//  - where does ETA1 come into play on keygen? unwind k/eta from param list
+//  - remove <Q> params
+//
+
 #![deny(clippy::pedantic)]
-//#![deny(warnings)]
+#![deny(warnings)]
 use zeroize::{Zeroize, ZeroizeOnDrop};
 mod ml_kem;
-mod auxiliary_algorithms;
+mod aux_alg;
 mod k_pke;
-mod old_lib;
+mod ntt;
+mod bytes2;
 
 pub const N: u32 = 11;
 pub const Q: u32 = 12;
@@ -26,16 +33,19 @@ macro_rules! functionality {
         #[derive(Zeroize, ZeroizeOnDrop)]
         pub struct CipherText([u8; CT_LEN]);
 
+        #[must_use]
         pub fn key_gen() -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
             ml_kem::key_gen::<K>(K, ETA1, &mut ek.0, &mut dk.0);
             (ek, dk)
         }
 
+        #[must_use]
         pub fn new_ek(bytes: [u8; EK_LEN]) -> EncapsKey {
             EncapsKey(bytes)
         }
 
+        #[must_use]
         pub fn new_ct(bytes: [u8; CT_LEN]) -> CipherText {
             CipherText(bytes)
         }
@@ -44,11 +54,15 @@ macro_rules! functionality {
             fn default() -> Self {
                 EncapsKey([0u8; EK_LEN])
             }
+
+            #[must_use]
             pub fn encaps(&self) -> (SharedSecretKey, CipherText) {
                 let (ek, mut ct) = (EncapsKey::default(), CipherText::default());
                 let ssk = ml_kem::encaps(K, ETA1, ETA2, DU, DV, &ek.0, &mut ct.0);
                 (ssk, ct)
             }
+
+            #[must_use]
             pub fn to_bytes(&self) -> [u8; EK_LEN] {
                 self.0.clone()
             }
@@ -58,6 +72,8 @@ macro_rules! functionality {
             fn default() -> Self {
                 DecapsKey([0u8; DK_LEN])
             }
+
+            #[must_use]
             pub fn decaps(&self, ct: &CipherText) -> SharedSecretKey {
                 ml_kem::decaps(K, DU, DV, &self.0, &ct.0)
             }
@@ -67,6 +83,8 @@ macro_rules! functionality {
             fn default() -> Self {
                 CipherText([0u8; CT_LEN])
             }
+
+            #[must_use]
             pub fn to_bytes(&self) -> [u8; CT_LEN] {
                 self.0.clone()
             }

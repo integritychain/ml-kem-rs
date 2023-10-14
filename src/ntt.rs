@@ -1,98 +1,8 @@
 //use crate::auxiliary_algorithms::{g, prf};
 
-
-/// Implements <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
-
-// TODO: Need to add zeroization (?)
-
-/// Algorithm 2 `BitsToBytes(b)` near line 760 of page 17
-///
-/// # Panics
-/// Will panic if input bit array length is not a multiple of 8 or length does not fit within `u32`
-#[must_use]
-pub fn bits_to_bytes(bit_array: &[u8]) -> Vec<u8> {
-    assert_eq!(
-        bit_array.len() % 8,
-        0,
-        "bit_array length must be a multiple of 8" // zero is OK
-    );
-    assert!(
-        u32::try_from(bit_array.len()).is_ok(), // TODO: Find better max
-        "bit_array length must fit within u32"
-    );
-    let mut byte_array = vec![0u8; bit_array.len() / 8]; // TODO: Any way to avoid heap alloc?
-    for i in 0..bit_array.len() {
-        byte_array[&i / 8] += bit_array[i] * 2u8.pow(u32::try_from(i).expect("too many bits") % 8);
-    }
-    byte_array
-}
-
-/// Algorithm 3 `BytesToBits(B)` near line 760 of page 17-18
-/// # Panics
-/// Will panic if output byte array length does not fit within `u32`
-#[must_use]
-pub fn bytes_to_bits(byte_array: &[u8]) -> Vec<u8> {
-    assert!(byte_array.len() < (u32::MAX / 8) as usize); // TODO: Find better max
-    let mut bit_array = vec![0u8; 8 * byte_array.len()];
-    for i in 0..byte_array.len() {
-        let mut byte = byte_array[i];
-        for j in 0..8usize {
-            bit_array[8 * i + j] = &byte % 2u8;
-            byte /= 2;
-        }
-    }
-    bit_array
-}
-
-// TODO: Maybe this whould be a wrapper
-type Z256 = u16;
-
-/// Algorithm 4 `ByteEncode<d>(F)` near line 774 of page 18-19
-/// # Panics
-/// Will panic if D is outside of 1..12
-#[must_use]
-pub fn byte_encode<const D: u32, const Q: u32>(integer_array: [Z256; 256]) -> Vec<u8> {
-    // TODO:We know output size
-    assert!((1 <= D) & (D <= 12));
-    let m: u32 = if D < 12 { 2_u32.pow(D) } else { Q };
-    let mut bit_array = vec![0u8; 256 * D as usize];
-    for i in 0..256 {
-        let mut a = integer_array[i] % u16::try_from(m).unwrap();
-        for j in 0..(D as usize) {
-            bit_array[i * (D as usize) + j] = (&a % 2) as u8;
-            a = (a - u16::from(bit_array[i * (D as usize) + j])) / 2;
-        }
-    }
-    bits_to_bytes(&bit_array)
-}
-
-/// Algorithm 5 `ByteDecode<d>(F)` near line 774 of page 18-19
-/// # Panics
-/// Will panic if D is outside of 1..12, or if `byte_array` length is not 32*D
-#[must_use]
-#[allow(dead_code)]
-pub fn byte_decode<const D: usize, const Q: u32>(byte_array: &[u8]) -> Vec<Z256> {
-    // TODO: We know output size
-    assert!((1 <= D) & (D <= 12));
-    assert_eq!(byte_array.len(), 32 * D);
-    let m: u32 = if D < 12 {
-        2_u32.pow(D.try_into().unwrap())
-    } else {
-        Q
-    };
-    let mut integer_array: Vec<Z256> = vec![0; 256];
-    let bit_array = bytes_to_bits(byte_array);
-    for i in 0..256 {
-        integer_array[i] = (0..D).fold(0, |acc, j| {
-            acc + u16::from(bit_array[i * D + j]) * 2_u16.pow(u32::try_from(j).unwrap())
-                % (u16::try_from(m).unwrap())
-        });
-    }
-    integer_array
-}
+pub(crate) type Z256 = u16;
 
 /// Algorithm 6 `SampleNTT(B)` near line 800 of page 20
-/// Hmmmm, `byte_stream` has to be an object that bytes can be drawn from
 /// # Panics
 /// Will panic if input `byte_stream` cannot be put into u32
 #[must_use]
@@ -137,39 +47,10 @@ pub fn sample_poly_cbd<const ETA: u32, const Q: u32>(byte_array: &[u8]) -> [Z256
     }
     integer_array
 }
-
-/// BitRev7(i) -- an unnumbered algorithm -- reverse lower 7 bits
-#[must_use]
-pub fn bit_rev_7(a: u8) -> u8 {
-    ((a >> 6) & 1)
-        | ((a >> 4) & 2)
-        | ((a >> 2) & 4)
-        | (a & 8)
-        | ((a << 2) & 16)
-        | ((a << 4) & 32)
-        | ((a << 6) & 64)
-}
 // probably ought to implement a quicker mod Q
 
 const ZETA: u32 = 17;
 const Q: u32 = 3329;
-
-// HAC Algorithm 14.76 Right-to-left binary exponentiation
-fn pow_mod_q(g: u32, e: u8) -> u32 {
-    let mut result = 1;
-    let mut s = g;
-    let mut e = e;
-    while e != 0 {
-        if e & 1 != 0 {
-            result = (result * s) % Q
-        };
-        e >>= 1;
-        if e != 0 {
-            s = (s * s) % Q
-        };
-    }
-    result
-}
 
 /// Algorithm 8 NTT(f) near line 847 on page 22
 /// # Panics
@@ -181,7 +62,7 @@ pub fn ntt(integer_array: &[Z256; 256]) -> [Z256; 256] {
     let mut k = 1;
     for len in [128, 64, 32, 16, 8, 4, 2] {
         for start in (0..256).step_by(2 * len) {
-            let zeta = pow_mod_q(ZETA, bit_rev_7(k));
+            let zeta = aux_alg::pow_mod_q(ZETA, aux_alg::bit_rev_7(k));
             k += 1;
             for j in start..(start + len) {
                 let t = (zeta * u32::try_from(output_array[j + len]).unwrap()) % Q;
@@ -205,7 +86,7 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
     let mut k = 127;
     for len in [2, 4, 8, 16, 32, 64, 128] {
         for start in (0..256).step_by(2 * len) {
-            let zeta = pow_mod_q(ZETA, bit_rev_7(k));
+            let zeta = aux_alg::pow_mod_q(ZETA, aux_alg::bit_rev_7(k));
             k -= 1;
             for j in start..(start + len) {
                 let t = f[j];
@@ -233,7 +114,7 @@ pub fn multiply_ntts(f_hat: &[Z256; 256], g_hat: &[Z256; 256]) -> [Z256; 256] {
             f_hat[2 * i + 1],
             g_hat[2 * i],
             g_hat[2 * i + 1],
-            Z256::try_from(pow_mod_q(ZETA, 2 * bit_rev_7(u8::try_from(i).unwrap()) + 1)).unwrap(),
+            Z256::try_from(aux_alg::pow_mod_q(ZETA, 2 * aux_alg::bit_rev_7(u8::try_from(i).unwrap()) + 1)).unwrap(),
         );
         h_hat[2 * i] = h_hat_2i;
         h_hat[2 * i + 1] = h_hat_2ip1;
@@ -252,7 +133,9 @@ pub fn base_case_multiply(a0: Z256, a1: Z256, b0: Z256, b1: Z256, gamma: Z256) -
     (c0 as Z256, c1 as Z256)
 }
 
-use sha3::digest::XofReader; //, Digest, Sha3_512, Shake128, Shake256;
+use sha3::digest::XofReader;
+use crate::aux_alg;
+use crate::bytes2::bytes_to_bits; //, Digest, Sha3_512, Shake128, Shake256;
 
 /// XOF
 // fn xof(rho: &[u8; 32], i: u8, j: u8) -> impl XofReader {
@@ -362,7 +245,6 @@ use sha3::digest::XofReader; //, Digest, Sha3_512, Shake128, Shake256;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rand::{Rng, SeedableRng};
 
     #[test]

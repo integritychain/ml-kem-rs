@@ -1,6 +1,7 @@
 use sha3::{Digest, Sha3_256, Sha3_512, Shake128, Shake256};
 use sha3::digest::{ExtendableOutput, XofReader};
 use sha3::digest::Update;
+use crate::Q;
 
 /// Function H from line 746 on page 17
 pub fn h(bytes: &[u8]) -> [u8; 32] {
@@ -16,8 +17,7 @@ pub fn xof(rho: &[u8; 32], i: u8, j: u8) -> impl XofReader {
     hasher.update(rho);
     hasher.update(&[i]);
     hasher.update(&[j]);
-    let reader = hasher.finalize_xof();
-    reader
+    hasher.finalize_xof()
 }
 
 // use rand::Rng;
@@ -42,5 +42,34 @@ pub fn prf<const N1: usize>(s: &[u8; 32], b: u8) -> [u8; 64 * 2] {
     let mut reader = hasher.finalize_xof();
     let mut result = [0u8; 64 * 2];
     reader.read(&mut result);
+    result
+}
+
+/// BitRev7(i) -- an unnumbered algorithm -- reverse lower 7 bits
+#[must_use]
+pub fn bit_rev_7(a: u8) -> u8 {
+    ((a >> 6) & 1)
+        | ((a >> 4) & 2)
+        | ((a >> 2) & 4)
+        | (a & 8)
+        | ((a << 2) & 16)
+        | ((a << 4) & 32)
+        | ((a << 6) & 64)
+}
+
+// HAC Algorithm 14.76 Right-to-left binary exponentiation
+pub fn pow_mod_q(g: u32, e: u8) -> u32 {
+    let mut result = 1;
+    let mut s = g;
+    let mut e = e;
+    while e != 0 {
+        if e & 1 != 0 {
+            result = (result * s) % Q;
+        };
+        e >>= 1;
+        if e != 0 {
+            s = (s * s) % Q;
+        };
+    }
     result
 }
