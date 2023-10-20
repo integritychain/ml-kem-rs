@@ -1,27 +1,26 @@
-// TODO
-//  - check naming convention for ntt
-//  - where does ETA1 come into play on keygen? unwind k/eta from param list
-//  - remove <Q> params
-//
-
 #![deny(clippy::pedantic)]
 #![deny(warnings)]
-use zeroize::{Zeroize, ZeroizeOnDrop};
-mod ml_kem;
-mod aux_alg;
-mod k_pke;
-mod ntt;
-mod bytes2;
 
-pub const N: u32 = 11;
-pub const Q: u32 = 12;
-pub const SSK_LEN: usize = 32;
+use zeroize::{Zeroize, ZeroizeOnDrop};
+
+mod aux_fns;
+mod byte_fns;
+mod k_pke;
+mod ml_kem;
+mod ntt;
+
+const _N: u32 = 256;
+const Q: u32 = 3329;
+const SSK_LEN: usize = 32;
 
 #[derive(Default, PartialEq, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct SharedSecretKey([u8; SSK_LEN]);
 
 macro_rules! functionality {
     () => {
+        const ETA1_64: usize = ETA1 * 64;
+        const ETA2_64: usize = ETA2 * 64;
+
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
         #[derive(Zeroize, ZeroizeOnDrop)]
@@ -36,7 +35,7 @@ macro_rules! functionality {
         #[must_use]
         pub fn key_gen() -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            ml_kem::key_gen::<K>(K, ETA1, &mut ek.0, &mut dk.0);
+            ml_kem::key_gen::<K, ETA1, ETA1_64>(&mut ek.0, &mut dk.0);
             (ek, dk)
         }
 
@@ -58,7 +57,7 @@ macro_rules! functionality {
             #[must_use]
             pub fn encaps(&self) -> (SharedSecretKey, CipherText) {
                 let (ek, mut ct) = (EncapsKey::default(), CipherText::default());
-                let ssk = ml_kem::encaps(K, ETA1, ETA2, DU, DV, &ek.0, &mut ct.0);
+                let ssk = ml_kem::encaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(&ek.0, &mut ct.0);
                 (ssk, ct)
             }
 
@@ -96,10 +95,10 @@ pub mod ml_kem_512 {
     use crate::{ml_kem, SharedSecretKey};
 
     const K: usize = 2;
-    const ETA1: u32 = 3;
-    const ETA2: u32 = 2;
-    const DU: u32 = 10;
-    const DV: u32 = 4;
+    const ETA1: usize = 3;
+    const ETA2: usize = 2;
+    const DU: usize = 10;
+    const DV: usize = 4;
     const EK_LEN: usize = 800;
     const DK_LEN: usize = 1632;
     const CT_LEN: usize = 768;
@@ -111,10 +110,10 @@ pub mod ml_kem_768 {
     use crate::{ml_kem, SharedSecretKey};
 
     const K: usize = 3;
-    const ETA1: u32 = 2;
-    const ETA2: u32 = 2;
-    const DU: u32 = 10;
-    const DV: u32 = 4;
+    const ETA1: usize = 2;
+    const ETA2: usize = 2;
+    const DU: usize = 10;
+    const DV: usize = 4;
     const EK_LEN: usize = 1184;
     const DK_LEN: usize = 2400;
     const CT_LEN: usize = 1088;
@@ -126,10 +125,10 @@ pub mod ml_kem_1024 {
     use crate::{ml_kem, SharedSecretKey};
 
     const K: usize = 4;
-    const ETA1: u32 = 2;
-    const ETA2: u32 = 2;
-    const DU: u32 = 11;
-    const DV: u32 = 5;
+    const ETA1: usize = 2;
+    const ETA2: usize = 2;
+    const DU: usize = 11;
+    const DV: usize = 5;
     const EK_LEN: usize = 1568;
     const DK_LEN: usize = 3168;
     const CT_LEN: usize = 1568;
