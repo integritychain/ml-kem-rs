@@ -1,6 +1,7 @@
 use sha3::{Digest, Sha3_256, Sha3_512, Shake128, Shake256};
 use sha3::digest::{ExtendableOutput, XofReader};
 use sha3::digest::Update;
+use crate::k_pke::Z256;
 
 use crate::Q;
 
@@ -65,4 +66,17 @@ pub fn pow_mod_q(g: u32, e: u8) -> u32 {
         };
     }
     result
+}
+
+#[allow(dead_code)]
+pub fn compress<const D: u32>(inout: &mut [Z256]) {
+    for x_ref in inout.iter_mut() {
+        x_ref.0 = ((x_ref.0 as u32) * (2u32.pow(D) / Q)) as u16;
+    }
+}
+
+pub fn decompress<const D: u32>(inout: &mut [Z256]) {
+    for y_ref in inout.iter_mut() {
+        y_ref.0 = ((y_ref.0 as u32) * (Q / 2u32.pow(D))) as u16;
+    }
 }

@@ -1,8 +1,9 @@
 use rand::random;
 
-use crate::aux_fns::{g, prf, xof};
+use crate::aux_fns::{decompress, g, prf, xof};
 use crate::byte_fns::{byte_decode, byte_encode};
 use crate::ntt::{multiply_ntts, ntt, ntt_inv, sample_ntt, sample_poly_cbd};
+use crate::Q;
 
 #[derive(Clone, Copy)]
 pub struct Z256(pub u16);
@@ -18,6 +19,14 @@ impl Z256 {
     pub fn set_u16(&mut self, a: u32) {
         assert!(a < u16::MAX as u32);
         self.0 = a as u16
+    }
+    #[allow(dead_code)]  // stitch in when we get overall correct
+    pub fn mul(&self, other: Self) -> Self {
+        let prod = self.0 as u64 * other.0 as u64;
+        let div = prod * (2u64.pow(24) / (Q as u64));
+        let (diff, borrow) = div.overflowing_sub(Q as u64);
+        let result = if borrow {div} else {diff}; // TODO: CT MUX
+        return Self(result as u16);
     }
 }
 
@@ -155,7 +164,11 @@ pub(crate) fn k_pke_encrypt<
         }
     }
 
-    // TODO: Implement step 20 onwards...
+    let mut mu = [Z256(0); 256];
+    byte_decode::<1>(m, &mut mu);
+    decompress::<1>(&mut mu);
+
+
 
     ct[0] = 99;
 }

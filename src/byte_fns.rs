@@ -54,8 +54,9 @@ pub fn byte_encode<const D: u32>(integer_array: &[Z256; 256], byte_array: &mut [
 /// Will panic if D is outside of 1..12, or if `byte_array` length is not 32*D
 #[allow(dead_code)]
 pub fn byte_decode<const D: usize>(byte_array: &[u8], integer_array: &mut [Z256]) {
-    assert!((1 <= D) & (D <= 12));
-    assert_eq!(byte_array.len(), 32 * D);
+    debug_assert!((1 <= D) & (D <= 12));
+    debug_assert_eq!(byte_array.len(), 32 * D);
+    debug_assert_eq!(integer_array.len(), 256);
     let m: u32 = if D < 12 {
         2_u32.pow(D.try_into().unwrap())
     } else {
