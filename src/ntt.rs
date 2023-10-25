@@ -1,8 +1,8 @@
 use sha3::digest::XofReader;
 
 //pub(crate) type Z256 = u16;
-use crate::aux_fns;
 use crate::byte_fns::bytes_to_bits;
+use crate::helpers;
 use crate::k_pke::Z256;
 
 //, Digest, Sha3_512, Shake128, Shake256;
@@ -61,7 +61,7 @@ pub fn ntt(integer_array: &[Z256; 256]) -> [Z256; 256] {
     let mut k = 1;
     for len in [128, 64, 32, 16, 8, 4, 2] {
         for start in (0..256).step_by(2 * len) {
-            let zeta = aux_fns::pow_mod_q(ZETA, aux_fns::bit_rev_7(k));
+            let zeta = helpers::pow_mod_q(ZETA, helpers::bit_rev_7(k));
             k += 1;
             for j in start..(start + len) {
                 let t = (zeta * (output_array[j + len]).get_u32()) % Q;
@@ -84,12 +84,13 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
     let mut k = 127;
     for len in [2, 4, 8, 16, 32, 64, 128] {
         for start in (0..256).step_by(2 * len) {
-            let zeta = aux_fns::pow_mod_q(ZETA, aux_fns::bit_rev_7(k));
+            let zeta = helpers::pow_mod_q(ZETA, helpers::bit_rev_7(k));
             k -= 1;
             for j in start..(start + len) {
                 let t = f[j];
                 f[j].set_u16((t.get_u32() + f[j + len].get_u32()) % Q);
-                f[j + len].set_u16((zeta * (Q + f[j + len].get_u32() - (t.get_u32() % Q))) % Q); // TODO: fail on t too large
+                f[j + len].set_u16((zeta * (Q + f[j + len].get_u32() - (t.get_u32() % Q))) % Q);
+                // TODO: fail on t too large
             }
         }
     }
@@ -110,7 +111,7 @@ pub fn multiply_ntts(f_hat: &[Z256; 256], g_hat: &[Z256; 256]) -> [Z256; 256] {
             f_hat[2 * i + 1],
             g_hat[2 * i],
             g_hat[2 * i + 1],
-            Z256(aux_fns::pow_mod_q(ZETA, 2 * aux_fns::bit_rev_7(u8::try_from(i).unwrap()) + 1) as u16),
+            Z256(helpers::pow_mod_q(ZETA, 2 * helpers::bit_rev_7(u8::try_from(i).unwrap()) + 1) as u16),
         );
         h_hat[2 * i] = h_hat_2i;
         h_hat[2 * i + 1] = h_hat_2ip1;

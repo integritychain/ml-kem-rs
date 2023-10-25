@@ -1,8 +1,8 @@
 use rand::random;
 
-use crate::aux_fns::{decompress, g, prf, xof};
 use crate::byte_fns::{byte_decode, byte_encode};
-use crate::ntt::{multiply_ntts, ntt, ntt_inv, sample_ntt, sample_poly_cbd};
+use crate::helpers::{compress, decompress, dot_t_prod, g, mat_mul, mat_t_mul, prf, vec_add, xof};
+use crate::ntt::{ntt, ntt_inv, sample_ntt, sample_poly_cbd};
 use crate::Q;
 
 #[derive(Clone, Copy)]
@@ -20,12 +20,12 @@ impl Z256 {
         assert!(a < u16::MAX as u32);
         self.0 = a as u16
     }
-    #[allow(dead_code)]  // stitch in when we get overall correct
+    #[allow(dead_code)] // stitch in when we get overall correct
     pub fn mul(&self, other: Self) -> Self {
         let prod = self.0 as u64 * other.0 as u64;
         let div = prod * (2u64.pow(24) / (Q as u64));
         let (diff, borrow) = div.overflowing_sub(Q as u64);
-        let result = if borrow {div} else {diff}; // TODO: CT MUX
+        let result = if borrow { div } else { diff }; // TODO: CT MUX
         return Self(result as u16);
     }
 }
@@ -64,26 +64,7 @@ pub fn k_pke_key_gen<const K: usize, const ETA1: usize, const ETA1_64: usize>(ek
         e_hat[i] = ntt(&e[i]);
     }
 
-    let mut t_hat = [[Z256(0); 256]; K];
-
-    // matrix product of a_hat and s_hat
-    for i in 0..K {
-        for j in 0..K {
-            for (t_ref, m_val) in t_hat[i]
-                .iter_mut()
-                .zip(multiply_ntts(&a_hat[i][j], &s_hat[j]))
-            {
-                t_ref.set_u16(t_ref.get_u32() + m_val.get_u32());
-            }
-        }
-    }
-
-    // add in e_hat
-    for i in 0..K {
-        for (t_ref, m_val) in t_hat[i].iter_mut().zip(&e_hat[i]) {
-            t_ref.set_u16(t_ref.get_u32() + m_val.get_u32());
-        }
-    }
+    let t_hat = vec_add(&mat_mul(&a_hat, &s_hat), &e_hat);
 
     for i in 0..K {
         byte_encode::<12>(&t_hat[i], &mut ek_pke[i * 384..(i + 1) * 384]); // 384 = 32*d, d=12
@@ -133,42 +114,63 @@ pub(crate) fn k_pke_encrypt<
         n += 1;
     }
 
-    let _e2 = sample_poly_cbd::<ETA2, ETA2_64>(&prf::<ETA2_64>(&randomness, n));
+    let e2 = sample_poly_cbd::<ETA2, ETA2_64>(&prf::<ETA2_64>(&randomness, n));
 
     let mut r_hat = [[Z256(0); 256]; K];
     for i in 0..K {
         r_hat[i] = ntt(&r[i]);
     }
 
-    // matrix product of a_hat^T and r_hat  // TODO: doubt this is correct
-    let mut aht_rh = [[Z256(0); 256]; K];
+    let mut u = mat_t_mul(&a_hat, &r_hat);
     for i in 0..K {
-        for j in 0..K {
-            for (a_ref, m_val) in aht_rh[j]
-                .iter_mut()
-                .zip(multiply_ntts(&a_hat[j][i], &r_hat[j]))
-            {
-                a_ref.set_u16(a_ref.get_u32() + m_val.get_u32());
-            }
-        }
+        u[i] = ntt_inv(&u[i]);
     }
-
-    let mut u = [[Z256(0); 256]; K];
-    for i in 0..K {
-        u[i] = ntt_inv(&aht_rh[i]);
-    }
-
-    for i in 0..K {
-        for (u_ref, m_val) in u[i].iter_mut().zip(&e1[i]) {
-            u_ref.set_u16(u_ref.get_u32() + m_val.get_u32());
-        }
-    }
+    u = vec_add(&u, &e1);
 
     let mut mu = [Z256(0); 256];
     byte_decode::<1>(m, &mut mu);
     decompress::<1>(&mut mu);
 
+    let mut v = vec_add(&vec_add(&[dot_t_prod(&t_hat, &r_hat)], &[e2]), &[mu]);
 
+    for i in 0..K {
+        compress::<DU>(&mut u[i]);
+        byte_encode::<DU>(&u[i], &mut ct[i * 320..(i + 1) * 320]);
+    }
+
+    compress::<DV>(&mut v[0]);
+    byte_encode::<DV>(&v[0], &mut ct[K * 320..(K * 320 + 128)]); // DV = 4 FIX!!
 
     ct[0] = 99;
+}
+
+pub(crate) fn k_pke_decrypt<const K: usize, const DU: usize, const DV: usize>(dk: &[u8], ct: &[u8]) -> [u8; 32] {
+    let c1 = &ct[0..32 * DU * K];
+    let c2 = &ct[32 * DU * K..32 * (DU * K + DV)];
+
+    let mut u = [[Z256(0); 256]; K];
+    for i in 0..K {
+        byte_decode::<DU>(&c1[32 * DU * i..32 * DU * (i + 1)], &mut u[i]);
+        decompress::<DU>(&mut u[i]);
+    }
+
+    let mut v = [Z256(0); 256];
+    byte_decode::<DV>(c2, &mut v);
+    decompress::<DV>(&mut v);
+
+    let mut s_hat = [Z256(0); 256];
+    byte_decode::<12>(&dk[0..384], &mut s_hat);
+
+    let mut w = [Z256(0); 256];
+    for i in 0..K {
+        let xx = mat_t_mul(&[[s_hat]], &[ntt(&u[i])]);
+        let yy = ntt_inv(&xx[0]);
+        for i in 0..256 {
+            w[i].set_u16((Q + v[i].get_u32() - yy[i].get_u32()) % Q);
+        }
+    }
+    compress::<1>(&mut w);
+    let mut m = [0u8; 32];
+    byte_encode::<1>(&w, &mut m);
+    m
 }

@@ -34,16 +34,16 @@ pub fn bytes_to_bits(byte_array: &[u8]) -> Vec<u8> {
 /// Algorithm 4 `ByteEncode<d>(F)` near line 774 of page 18-19
 /// # Panics
 /// Will panic if D is outside of 1..12
-pub fn byte_encode<const D: u32>(integer_array: &[Z256; 256], byte_array: &mut [u8]) {
+pub fn byte_encode<const D: usize>(integer_array: &[Z256; 256], byte_array: &mut [u8]) {
     assert!((1 <= D) & (D <= 12));
-    assert_eq!(byte_array.len(), 32 * D as usize);
-    let m: u32 = if D < 12 { 2_u32.pow(D) } else { Q };
-    let mut bit_array = vec![0u8; 256 * D as usize]; // TODO: remove vec
+    assert_eq!(byte_array.len(), 32 * D);
+    let m: u32 = if D < 12 { 2_u32.pow(D as u32) } else { Q };
+    let mut bit_array = vec![0u8; 256 * D]; // TODO: remove vec
     for i in 0..256 {
         let mut a = integer_array[i].get_u16() % u16::try_from(m).unwrap();
-        for j in 0..(D as usize) {
-            bit_array[i * (D as usize) + j] = (&a % 2) as u8;
-            a = (a - u16::from(bit_array[i * (D as usize) + j])) / 2;
+        for j in 0..(D) {
+            bit_array[i * (D) + j] = (&a % 2) as u8;
+            a = (a - u16::from(bit_array[i * D + j])) / 2;
         }
     }
     bits_to_bytes(&bit_array, byte_array);

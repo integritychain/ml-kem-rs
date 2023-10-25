@@ -1,10 +1,12 @@
 #![deny(clippy::pedantic)]
 #![deny(warnings)]
 
+#![doc = include_str!("../README.md")]
+
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-mod aux_fns;
 mod byte_fns;
+mod helpers;
 mod k_pke;
 mod ml_kem;
 mod ntt;
@@ -74,7 +76,7 @@ macro_rules! functionality {
 
             #[must_use]
             pub fn decaps(&self, ct: &CipherText) -> SharedSecretKey {
-                ml_kem::decaps(K, DU, DV, &self.0, &ct.0)
+                ml_kem::decaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(&self.0, &ct.0)
             }
         }
 

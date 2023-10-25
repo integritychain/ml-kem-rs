@@ -1,9 +1,9 @@
 use rand::random;
 
-use crate::{SharedSecretKey, SSK_LEN};
-use crate::aux_fns::g;
+use crate::helpers::{g, h, j};
+use crate::k_pke::k_pke_decrypt;
+use crate::SharedSecretKey;
 
-use super::aux_fns::h;
 use super::k_pke::{k_pke_encrypt, k_pke_key_gen};
 
 pub(crate) fn key_gen<const K: usize, const ETA1: usize, const ETA1_64: usize>(ek: &mut [u8], dk: &mut [u8]) {
@@ -42,6 +42,37 @@ pub(crate) fn encaps<
     SharedSecretKey(k)
 }
 
-pub(crate) fn decaps(_k: usize, _du: usize, _dv: usize, _dk: &[u8], _ct: &[u8]) -> SharedSecretKey {
-    SharedSecretKey([55u8; SSK_LEN])
+pub(crate) fn decaps<
+    const K: usize,
+    const ETA1: usize,
+    const ETA1_64: usize,
+    const ETA2: usize,
+    const ETA2_64: usize,
+    const DU: usize,
+    const DV: usize,
+>(
+    dk: &[u8], ct: &[u8],
+) -> SharedSecretKey {
+    let m_prime = k_pke_decrypt::<K, DU, DV>(&dk[0..384 * K], &ct);
+
+    let mut g_input = [0u8; 55];
+    g_input[0..m_prime.len()].copy_from_slice(&m_prime);
+    g_input[0..32].copy_from_slice(&dk[768 * K + 32..768 * K + 64]);
+    let (mut k_prime, r_prime) = g(&g_input);
+
+    let mut j_input = [0u8; 32 + 768];
+    j_input[0..32].copy_from_slice(&dk[768 * K + 64..768 * K + 96]);
+    j_input[32..32 + ct.len()].copy_from_slice(&ct);
+    let k_bar = j(&j_input, 32); // TODO: remove 32
+    let mut c_prime = [0u8; 768];
+    k_pke_encrypt::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(
+        &dk[384 * K..768 * K + 32],
+        &m_prime,
+        &r_prime,
+        &mut c_prime,
+    );
+    if ct != c_prime {
+        k_prime = k_bar
+    };
+    SharedSecretKey(k_prime)
 }
