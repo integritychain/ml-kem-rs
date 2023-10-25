@@ -18,9 +18,9 @@ pub fn bits_to_bytes(bit_array: &[u8], byte_array: &mut [u8]) {
 /// # Panics
 /// Will panic if output byte array length does not fit within `u32`
 #[must_use]
-pub fn bytes_to_bits(byte_array: &[u8]) -> Vec<u8> {
-    assert!(byte_array.len() < (u32::MAX / 8) as usize); // TODO: Find better max
-    let mut bit_array = vec![0u8; 8 * byte_array.len()];
+pub fn bytes_to_bits<const D_8: usize>(byte_array: &[u8]) -> [u8; D_8] {
+    assert!(byte_array.len() < (u32::MAX / 8) as usize);
+    let mut bit_array = [0u8; D_8];
     for i in 0..byte_array.len() {
         let mut byte = byte_array[i];
         for j in 0..8usize {
@@ -31,14 +31,15 @@ pub fn bytes_to_bits(byte_array: &[u8]) -> Vec<u8> {
     bit_array
 }
 
+
 /// Algorithm 4 `ByteEncode<d>(F)` near line 774 of page 18-19
 /// # Panics
 /// Will panic if D is outside of 1..12
-pub fn byte_encode<const D: usize>(integer_array: &[Z256; 256], byte_array: &mut [u8]) {
+pub fn byte_encode<const D: usize, const D_256: usize>(integer_array: &[Z256; 256], byte_array: &mut [u8]) {
     assert!((1 <= D) & (D <= 12));
     assert_eq!(byte_array.len(), 32 * D);
     let m: u32 = if D < 12 { 2_u32.pow(D as u32) } else { Q };
-    let mut bit_array = vec![0u8; 256 * D]; // TODO: remove vec
+    let mut bit_array = [0u8; D_256];
     for i in 0..256 {
         let mut a = integer_array[i].get_u16() % u16::try_from(m).unwrap();
         for j in 0..(D) {
@@ -52,8 +53,7 @@ pub fn byte_encode<const D: usize>(integer_array: &[Z256; 256], byte_array: &mut
 /// Algorithm 5 `ByteDecode<d>(F)` near line 774 of page 18-19
 /// # Panics
 /// Will panic if D is outside of 1..12, or if `byte_array` length is not 32*D
-#[allow(dead_code)]
-pub fn byte_decode<const D: usize>(byte_array: &[u8], integer_array: &mut [Z256]) {
+pub fn byte_decode<const D: usize, const D_8: usize>(byte_array: &[u8], integer_array: &mut [Z256]) {
     debug_assert!((1 <= D) & (D <= 12));
     debug_assert_eq!(byte_array.len(), 32 * D);
     debug_assert_eq!(integer_array.len(), 256);
@@ -62,7 +62,8 @@ pub fn byte_decode<const D: usize>(byte_array: &[u8], integer_array: &mut [Z256]
     } else {
         Q
     };
-    let bit_array = bytes_to_bits(byte_array);
+    let bit_array = bytes_to_bits::<D_8>(byte_array);
+    println!("line 65 len {}", byte_array.len()); // TODO remove vec
     for i in 0..256 {
         integer_array[i] = (0..D).fold(Z256(0), |acc: Z256, j| {
             Z256(
@@ -103,29 +104,29 @@ mod tests {
             let num_bytes = 32 * 11;
             let mut bytes2 = vec![0u8; num_bytes];
             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
-            byte_decode::<11>(&bytes1, &mut integer_array);
-            byte_encode::<11>(&integer_array, &mut bytes2);
+            byte_decode::<11, 88>(&bytes1, &mut integer_array);
+            byte_encode::<11, 2816>(&integer_array, &mut bytes2);
             assert_eq!(bytes1, bytes2);
 
             let num_bytes = 32 * 10;
             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
             let mut bytes2 = vec![0u8; num_bytes];
-            byte_decode::<10>(&bytes1, &mut integer_array);
-            byte_encode::<10>(&integer_array, &mut bytes2);
+            byte_decode::<10, 80>(&bytes1, &mut integer_array);
+            byte_encode::<10, 2560>(&integer_array, &mut bytes2);
             assert_eq!(bytes1, bytes2);
 
             let num_bytes = 32 * 5;
             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
             let mut bytes2 = vec![0u8; num_bytes];
-            byte_decode::<5>(&bytes1, &mut integer_array);
-            byte_encode::<5>(&integer_array, &mut bytes2);
+            byte_decode::<5, 40>(&bytes1, &mut integer_array);
+            byte_encode::<5, 1280>(&integer_array, &mut bytes2);
             assert_eq!(bytes1, bytes2);
 
             let num_bytes = 32 * 4;
             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
             let mut bytes2 = vec![0u8; num_bytes];
-            byte_decode::<4>(&bytes1, &mut integer_array);
-            byte_encode::<4>(&integer_array, &mut bytes2);
+            byte_decode::<4, 32>(&bytes1, &mut integer_array);
+            byte_encode::<4, 1024>(&integer_array, &mut bytes2);
             assert_eq!(bytes1, bytes2);
         }
     }

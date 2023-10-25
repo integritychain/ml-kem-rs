@@ -27,7 +27,9 @@ pub(crate) fn encaps<
     const ETA2: usize,
     const ETA2_64: usize,
     const DU: usize,
+    const DU_256: usize,
     const DV: usize,
+    const DV_256: usize
 >(
     ek: &[u8], ct: &mut [u8],
 ) -> SharedSecretKey {
@@ -37,7 +39,7 @@ pub(crate) fn encaps<
     g_input[0..32].copy_from_slice(&m);
     g_input[32..64].copy_from_slice(&h_ek);
     let (k, r) = g(&g_input);
-    k_pke_encrypt::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(ek, &m, &r, ct);
+    k_pke_encrypt::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DU_256, DV, DV_256>(ek, &m, &r, ct);
     assert_eq!(ct[0], 99);
     SharedSecretKey(k)
 }
@@ -49,11 +51,15 @@ pub(crate) fn decaps<
     const ETA2: usize,
     const ETA2_64: usize,
     const DU: usize,
+    const DU_8: usize,
+    const DU_256: usize,
     const DV: usize,
+    const DV_8: usize,
+    const DV_256: usize
 >(
     dk: &[u8], ct: &[u8],
 ) -> SharedSecretKey {
-    let m_prime = k_pke_decrypt::<K, DU, DV>(&dk[0..384 * K], &ct);
+    let m_prime = k_pke_decrypt::<K, DU, DU_8, DV, DV_8>(&dk[0..384 * K], &ct);
 
     let mut g_input = [0u8; 55];
     g_input[0..m_prime.len()].copy_from_slice(&m_prime);
@@ -65,7 +71,7 @@ pub(crate) fn decaps<
     j_input[32..32 + ct.len()].copy_from_slice(&ct);
     let k_bar = j(&j_input, 32); // TODO: remove 32
     let mut c_prime = [0u8; 768];
-    k_pke_encrypt::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(
+    k_pke_encrypt::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DU_256, DV, DV_256>(
         &dk[384 * K..768 * K + 32],
         &m_prime,
         &r_prime,

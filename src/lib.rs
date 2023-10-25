@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 #![deny(warnings)]
-
 #![doc = include_str!("../README.md")]
 
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -22,6 +21,10 @@ macro_rules! functionality {
     () => {
         const ETA1_64: usize = ETA1 * 64;
         const ETA2_64: usize = ETA2 * 64;
+        const DU_8: usize = DU * 256;
+        const DU_256: usize = DU * 256;
+        const DV_8: usize = DV * 256;
+        const DV_256: usize = DV * 256;
 
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -59,7 +62,7 @@ macro_rules! functionality {
             #[must_use]
             pub fn encaps(&self) -> (SharedSecretKey, CipherText) {
                 let (ek, mut ct) = (EncapsKey::default(), CipherText::default());
-                let ssk = ml_kem::encaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(&ek.0, &mut ct.0);
+                let ssk = ml_kem::encaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DU_256, DV, DV_256>(&ek.0, &mut ct.0);
                 (ssk, ct)
             }
 
@@ -76,7 +79,7 @@ macro_rules! functionality {
 
             #[must_use]
             pub fn decaps(&self, ct: &CipherText) -> SharedSecretKey {
-                ml_kem::decaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(&self.0, &ct.0)
+                ml_kem::decaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DU_8, DU_256, DV, DV_8, DV_256>(&self.0, &ct.0)
             }
         }
 

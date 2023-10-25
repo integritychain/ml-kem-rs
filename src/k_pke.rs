@@ -67,12 +67,12 @@ pub fn k_pke_key_gen<const K: usize, const ETA1: usize, const ETA1_64: usize>(ek
     let t_hat = vec_add(&mat_mul(&a_hat, &s_hat), &e_hat);
 
     for i in 0..K {
-        byte_encode::<12>(&t_hat[i], &mut ek_pke[i * 384..(i + 1) * 384]); // 384 = 32*d, d=12
+        byte_encode::<12, 3072>(&t_hat[i], &mut ek_pke[i * 384..(i + 1) * 384]); // 384 = 32*d, d=12
     }
     ek_pke[K * 384..].copy_from_slice(&rho);
 
     for i in 0..K {
-        byte_encode::<12>(&s[i], &mut dk_pke[i * 384..(i + 1) * 384]);
+        byte_encode::<12, 3072>(&s[i], &mut dk_pke[i * 384..(i + 1) * 384]);
     }
 }
 
@@ -83,7 +83,9 @@ pub(crate) fn k_pke_encrypt<
     const ETA2: usize,
     const ETA2_64: usize,
     const DU: usize,
+    const DU_256: usize,
     const DV: usize,
+    const DV_256: usize
 >(
     ek: &[u8], m: &[u8], randomness: &[u8; 32], ct: &mut [u8],
 ) {
@@ -93,7 +95,7 @@ pub(crate) fn k_pke_encrypt<
     let mut n = 0;
     let mut t_hat = [[Z256(0); 256]; K];
     for i in 0..K {
-        byte_decode::<12>(&ek[384 * i..384 * (i + 1)], &mut t_hat[i]);
+        byte_decode::<12, { 384 * 8 }>(&ek[384 * i..384 * (i + 1)], &mut t_hat[i]);
     }
     let mut rho = [0u8; 32];
     rho.copy_from_slice(&ek[384 * K..(384 * K + 32)]);
@@ -128,38 +130,38 @@ pub(crate) fn k_pke_encrypt<
     u = vec_add(&u, &e1);
 
     let mut mu = [Z256(0); 256];
-    byte_decode::<1>(m, &mut mu);
+    byte_decode::<1, { 32 * 8 }>(m, &mut mu);
     decompress::<1>(&mut mu);
 
     let mut v = vec_add(&vec_add(&[dot_t_prod(&t_hat, &r_hat)], &[e2]), &[mu]);
 
     for i in 0..K {
         compress::<DU>(&mut u[i]);
-        byte_encode::<DU>(&u[i], &mut ct[i * 320..(i + 1) * 320]);
+        byte_encode::<DU, DU_256>(&u[i], &mut ct[i * 320..(i + 1) * 320]);
     }
 
     compress::<DV>(&mut v[0]);
-    byte_encode::<DV>(&v[0], &mut ct[K * 320..(K * 320 + 128)]); // DV = 4 FIX!!
+    byte_encode::<DV, DV_256>(&v[0], &mut ct[K * 320..(K * 320 + 128)]); // DV = 4 FIX!!
 
     ct[0] = 99;
 }
 
-pub(crate) fn k_pke_decrypt<const K: usize, const DU: usize, const DV: usize>(dk: &[u8], ct: &[u8]) -> [u8; 32] {
+pub(crate) fn k_pke_decrypt<const K: usize, const DU: usize, const DU_8: usize, const DV: usize, const DV_8: usize>(dk: &[u8], ct: &[u8]) -> [u8; 32] {
     let c1 = &ct[0..32 * DU * K];
     let c2 = &ct[32 * DU * K..32 * (DU * K + DV)];
 
     let mut u = [[Z256(0); 256]; K];
     for i in 0..K {
-        byte_decode::<DU>(&c1[32 * DU * i..32 * DU * (i + 1)], &mut u[i]);
+        byte_decode::<DU, DU_8>(&c1[32 * DU * i..32 * DU * (i + 1)], &mut u[i]);
         decompress::<DU>(&mut u[i]);
     }
 
     let mut v = [Z256(0); 256];
-    byte_decode::<DV>(c2, &mut v);
+    byte_decode::<DV, DV_8>(c2, &mut v);
     decompress::<DV>(&mut v);
 
     let mut s_hat = [Z256(0); 256];
-    byte_decode::<12>(&dk[0..384], &mut s_hat);
+    byte_decode::<12, { 384 * 8 }>(&dk[0..384], &mut s_hat);
 
     let mut w = [Z256(0); 256];
     for i in 0..K {
@@ -171,6 +173,6 @@ pub(crate) fn k_pke_decrypt<const K: usize, const DU: usize, const DV: usize>(dk
     }
     compress::<1>(&mut w);
     let mut m = [0u8; 32];
-    byte_encode::<1>(&w, &mut m);
+    byte_encode::<1, 256>(&w, &mut m);
     m
 }

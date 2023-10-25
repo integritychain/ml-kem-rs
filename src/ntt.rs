@@ -39,7 +39,7 @@ pub fn sample_ntt(mut reader: impl XofReader) -> [Z256; 256] {
 pub fn sample_poly_cbd<const ETA: usize, const ETA_64: usize>(byte_array: &[u8]) -> [Z256; 256] {
     debug_assert_eq!(byte_array.len(), ETA_64);
     let mut integer_array: [Z256; 256] = [Z256(0); 256];
-    let bit_array = bytes_to_bits(byte_array);
+    let bit_array = bytes_to_bits::<{ 3 * 64 * 8 }>(byte_array);  // TODO remove vec
     for i in 0..256 {
         let x = (0..(ETA as usize)).fold(0, |acc: u32, j| acc + u32::from(bit_array[2 * i * ETA + j]));
         let y = (0..(ETA as usize)).fold(0, |acc: u32, j| acc + u32::from(bit_array[2 * i * ETA + ETA + j]));
@@ -127,63 +127,3 @@ pub fn base_case_multiply(a0: Z256, a1: Z256, b0: Z256, b1: Z256, gamma: Z256) -
 
     (c0, c1)
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use rand::{Rng, SeedableRng};
-//     use crate::bytes2::{bits_to_bytes, byte_decode, byte_encode, bytes_to_bits};
-//
-//     #[test]
-//     fn test_k_pke_keygen() {
-//         let x = k_pke_keygen();
-//         //assert_eq!(x.0[0], 0);
-//     }
-//
-//     #[test]
-//     fn test_bytes_and_bits() {
-//         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123);
-//
-//         for _i in 0..100 {
-//             let num_bytes = rng.gen::<u8>();
-//             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
-//             let bits = bytes_to_bits(&bytes1);
-//             let bytes2 = bits_to_bytes(&bits);
-//             assert_eq!(bytes1, bytes2);
-//         }
-//     }
-//
-//     #[test]
-//     fn test_decode_and_encode() {
-//         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123);
-//
-//         for _i in 0..100 {
-//             let num_bytes = 32 * 11; //256;
-//             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
-//             let integer_array = byte_decode::<11, 3329>(&bytes1);
-//             let bytes2 =
-//                 byte_encode::<11, 3329>(integer_array.try_into().expect("vec to array gone wrong"));
-//             assert_eq!(bytes1, bytes2);
-//
-//             let num_bytes = 32 * 10; //256;
-//             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
-//             let integer_array = byte_decode::<10, 3329>(&bytes1);
-//             let bytes2 =
-//                 byte_encode::<10, 3329>(integer_array.try_into().expect("vec to array gone wrong"));
-//             assert_eq!(bytes1, bytes2);
-//
-//             let num_bytes = 32 * 5; //256;
-//             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
-//             let integer_array = byte_decode::<5, 3329>(&bytes1);
-//             let bytes2 =
-//                 byte_encode::<5, 3329>(integer_array.try_into().expect("vec to array gone wrong"));
-//             assert_eq!(bytes1, bytes2);
-//
-//             let num_bytes = 32 * 4; //256;
-//             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
-//             let integer_array = byte_decode::<4, 3329>(&bytes1);
-//             let bytes2 =
-//                 byte_encode::<4, 3329>(integer_array.try_into().expect("vec to array gone wrong"));
-//             assert_eq!(bytes1, bytes2);
-//         }
-//     }
-// }
