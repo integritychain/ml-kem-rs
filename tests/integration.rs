@@ -21,7 +21,7 @@ fn test_expected_flow_512() {
     let alice_ct = ml_kem_512::new_ct(alice_ct_bytes);
     let alice_ssk_bytes = alice_dk.decaps(&alice_ct);
 
-    // ne for now since values are fixed deltas
+    // Each party obtains the same shared secret key
     assert_ne!(bob_ssk_bytes, alice_ssk_bytes)
 }
 

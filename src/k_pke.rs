@@ -1,7 +1,7 @@
 use rand::random;
 
 use crate::byte_fns::{byte_decode, byte_encode};
-use crate::helpers::{compress, decompress, dot_t_prod, g, mat_mul, mat_t_mul, prf, vec_add, xof};
+use crate::helpers::{compress, decompress, dot_t_prod, g, mat_t_vec_mul, mat_vec_mul, prf, vec_add, xof};
 use crate::ntt::{ntt, ntt_inv};
 use crate::Q;
 use crate::sampling::{sample_ntt, sample_poly_cbd};
@@ -31,7 +31,7 @@ impl Z256 {
     }
 }
 
-/// AAlgorithm 12 K-PKE.KeyGen() on page 26
+/// Algorithm 12 `K-PKE.KeyGen()` on page 26.
 /// Generates an encryption key and a corresponding decryption key.
 pub fn k_pke_key_gen<const K: usize, const ETA1: usize, const ETA1_64: usize, const ETA1_512: usize>(
     ek_pke: &mut [u8], dk_pke: &mut [u8],
@@ -83,7 +83,7 @@ pub fn k_pke_key_gen<const K: usize, const ETA1: usize, const ETA1_64: usize, co
     }
 
     // 19: t̂ ← Â ◦ ŝ + ê
-    let t_hat = vec_add(&mat_mul(&a_hat, &s_hat), &e_hat);
+    let t_hat = vec_add(&mat_vec_mul(&a_hat, &s_hat), &e_hat);
 
     // 20: ek_{PKE} ← ByteEncode12(t̂)∥ρ        ▷ ByteEncode12 is run k times; include seed for Â
     for i in 0..K {
@@ -98,7 +98,7 @@ pub fn k_pke_key_gen<const K: usize, const ETA1: usize, const ETA1_64: usize, co
     // 22: return (ekPKE , dkPKE )
 }
 
-/// Algorithm 13 `K-PKE.Encrypt(ekPKE , m, r)` on page 27
+/// Algorithm 13 `K-PKE.Encrypt(ekPKE , m, r)` on page 27.
 /// Uses the encryption key to encrypt a plaintext message using the randomness r.
 pub(crate) fn k_pke_encrypt<
     const K: usize,
@@ -171,7 +171,7 @@ pub(crate) fn k_pke_encrypt<
         r_hat[i] = ntt(&r[i]);
     }
     // 19: u ← NTT−1 (Â⊺ ◦ r̂) + e1
-    let mut u = mat_t_mul(&a_hat, &r_hat);
+    let mut u = mat_t_vec_mul(&a_hat, &r_hat);
     for i in 0..K {
         u[i] = ntt_inv(&u[i]);
     }
@@ -192,11 +192,11 @@ pub(crate) fn k_pke_encrypt<
     }
     // 23: c2 ← ByteEncode_{dv}(Compress_{dv}(v))
     compress::<DV>(&mut v);
-    byte_encode::<DV, DV_256>(&v, &mut ct[K * step..(K * step + 32 * DV)]);  // TODO: fix step (?)
+    byte_encode::<DV, DV_256>(&v, &mut ct[K * step..(K * step + 32 * DV)]); // TODO: fix step (?)
     // 24: return c ← (c1 ∥ c2 )
 }
 
-/// Algorithm 14 K-PKE.Decrypt(dkPKE, c) on page 28
+/// Algorithm 14 `K-PKE.Decrypt(dkPKE, c)` on page 28.
 /// Uses the decryption key to decrypt a ciphertext.
 pub(crate) fn k_pke_decrypt<
     const K: usize,
@@ -234,7 +234,7 @@ pub(crate) fn k_pke_decrypt<
     // 6: w ← v − NTT−1 (ŝ⊺ ◦ NTT(u))           ▷ NTT−1 and NTT invoked k times
     let mut w = [Z256(0); 256];
     for i in 0..K {
-        let xx = mat_t_mul(&[[s_hat]], &[ntt(&u[i])]);  // TODO: UNLIKELY TO BE CORRECT
+        let xx = mat_t_vec_mul(&[[s_hat]], &[ntt(&u[i])]); // TODO: UNLIKELY TO BE CORRECT
         let yy = ntt_inv(&xx[0]);
         for i in 0..256 {
             w[i].set_u16((Q + v[i].get_u32() - yy[i].get_u32()) % Q);

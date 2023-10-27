@@ -4,6 +4,9 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
+/// Implements FIPS 203 draft Module-Lattice-based Key-Encapsulation Mechanism Standard.
+/// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
+#[cfg(test)]
 extern crate alloc;
 
 // Supports automatically clearing sensitive data on drop
@@ -30,8 +33,9 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 // PRF and XOF on page 16                                   --> helpers.rs
 // Three has functions: G, H, J on page 17                  --> helpers.rs
 // Compress and Decompress on page 18                       --> helpers.rs
+//
 // The three parameter sets are modules in this file with macro code that
-//  connects them into the functionality in ml_kem.rs
+// connects them into the functionality in ml_kem.rs
 
 mod byte_fns;
 mod helpers;
@@ -47,7 +51,7 @@ const ZETA: u32 = 17;
 const SSK_LEN: usize = 32;
 
 // Relevant to all parameter sets
-/// The (opaque) secret key than can be deserialized by each party
+/// The (opaque) secret key than can be deserialized by each party.
 #[derive(Debug, Zeroize, ZeroizeOnDrop)]
 pub struct SharedSecretKey([u8; SSK_LEN]);
 
@@ -75,6 +79,7 @@ macro_rules! functionality {
         const DV_8: usize = DV * 256;
         const DV_32: usize = DV * 32;
         const DV_256: usize = DV * 256;
+        const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -170,6 +175,7 @@ macro_rules! functionality {
                     DV_8,
                     DV_32,
                     DV_256,
+                    J_LEN,
                 >(&self.0, &ct.0)
             }
         }
@@ -188,7 +194,7 @@ macro_rules! functionality {
     };
 }
 
-///  ML-KEM-512 is claimed to be in security category 1, see table 2 & 3 on page 33
+///  ML-KEM-512 is claimed to be in security category 1, see table 2 & 3 on page 33.
 pub mod ml_kem_512 {
     use crate::{ml_kem, SharedSecretKey};
 
@@ -204,7 +210,7 @@ pub mod ml_kem_512 {
     functionality!();
 }
 
-/// ML-KEM-768 is claimed to be in security category 3, see table 2 & 3 on page 33
+/// ML-KEM-768 is claimed to be in security category 3, see table 2 & 3 on page 33.
 pub mod ml_kem_768 {
     use crate::{ml_kem, SharedSecretKey};
 
@@ -220,7 +226,7 @@ pub mod ml_kem_768 {
     functionality!();
 }
 
-/// ML-KEM-1024 is claimed to be in security category 5, see table 2 & 3 on page 33
+/// ML-KEM-1024 is claimed to be in security category 5, see table 2 & 3 on page 33.
 pub mod ml_kem_1024 {
     use crate::{ml_kem, SharedSecretKey};
 

@@ -1,8 +1,8 @@
 use crate::{helpers, Q, ZETA};
 use crate::k_pke::Z256;
 
-/// Algorithm 8 `NTT(f)` on page 22
-/// Computes the NTT representation f_hat of the given polynomial f ∈ R_q
+/// Algorithm 8 `NTT(f)` on page 22.
+/// Computes the NTT representation f_hat of the given polynomial f ∈ R_q.
 #[must_use]
 pub fn ntt(integer_array: &[Z256; 256]) -> [Z256; 256] {
     // Input: array f ∈ Z^{256}_q           ▷ the coeffcients of the input polynomial
@@ -35,8 +35,8 @@ pub fn ntt(integer_array: &[Z256; 256]) -> [Z256; 256] {
     array_f_hat
 }
 
-/// Algorithm 9 `NTTinv(f)` on page 23
-/// Computes the polynomial f ∈ R_q corresponding to the given NTT representation f_hat ∈ T_q .
+/// Algorithm 9 `NTTinv(f)` on page 23.
+/// Computes the polynomial f ∈ R_q corresponding to the given NTT representation f_hat ∈ T_q.
 #[must_use]
 pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
     // Input: array fˆ ∈ Z256           ▷ the coeffcients of input NTT representation
@@ -72,7 +72,7 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
     f
 }
 
-/// Algorithm 10 `MultiplyNTTs(f, g)` on page 24
+/// Algorithm 10 `MultiplyNTTs(f, g)` on page 24.
 /// Computes the product (in the ring Tq ) of two NTT representations.
 #[must_use]
 pub fn multiply_ntts(f_hat: &[Z256; 256], g_hat: &[Z256; 256]) -> [Z256; 256] {
@@ -96,7 +96,7 @@ pub fn multiply_ntts(f_hat: &[Z256; 256], g_hat: &[Z256; 256]) -> [Z256; 256] {
     h_hat
 }
 
-/// Algorithm 11 `BaseCaseMultiply(a0, a1, b0, b1, gamma)` on page 24
+/// Algorithm 11 `BaseCaseMultiply(a0, a1, b0, b1, gamma)` on page 24.
 /// Computes the product of two degree-one polynomials with respect to a quadratic modulus.
 #[must_use]
 pub fn base_case_multiply(a0: Z256, a1: Z256, b0: Z256, b1: Z256, gamma: Z256) -> (Z256, Z256) {

@@ -1,8 +1,6 @@
-//use std::convert::TryFrom;
-
 use crate::{k_pke::Z256, Q};
 
-/// Algorithm 2 `BitsToBytes(b)` on page 17
+/// Algorithm 2 `BitsToBytes(b)` on page 17.
 /// Converts a bit string (of length a multiple of eight) into an array of bytes.
 pub fn bits_to_bytes(bit_array_b: &[u8], byte_array_b: &mut [u8]) {
     // Input: bit array b ∈ {0, 1}^{8·ℓ}
@@ -18,7 +16,7 @@ pub fn bits_to_bytes(bit_array_b: &[u8], byte_array_b: &mut [u8]) {
     // 5: return B
 }
 
-/// Algorithm 3 `BytesToBits(B)` on page 18
+/// Algorithm 3 `BytesToBits(B)` on page 18.
 /// Performs the inverse of `BitsToBytes`, converting a byte array into a bit array.
 pub fn bytes_to_bits(byte_array_b: &[u8], bit_array_b: &mut [u8]) {
     // Input: byte array B ∈ B^ℓ
@@ -39,7 +37,7 @@ pub fn bytes_to_bits(byte_array_b: &[u8], bit_array_b: &mut [u8]) {
     // 7: return b
 }
 
-/// Algorithm 4 `ByteEncode<d>(F)` on page 19
+/// Algorithm 4 `ByteEncode<d>(F)` on page 19.
 /// Encodes an array of d-bit integers into a byte array, for 1 ≤ d ≤ 12.
 pub fn byte_encode<const D: usize, const D_256: usize>(integer_array_f: &[Z256; 256], byte_array_b: &mut [u8]) {
     // Input: integer array F ∈ Z^256_m, where m = 2^d if d < 12 and m = q if d = 12
@@ -71,7 +69,7 @@ pub fn byte_encode<const D: usize, const D_256: usize>(integer_array_f: &[Z256; 
     // 9: return B
 }
 
-/// Algorithm 5 `ByteDecode<d>(B)` on page 19
+/// Algorithm 5 `ByteDecode<d>(B)` on page 19.
 /// Decodes a byte array into an array of d-bit integers, for 1 ≤ d ≤ 12.
 pub fn byte_decode<const D: usize, const D_256: usize>(byte_array_b: &[u8], integer_array_f: &mut [Z256; 256]) {
     // Input: byte array B ∈ B^{32d}
