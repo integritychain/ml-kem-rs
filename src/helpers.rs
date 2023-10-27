@@ -6,21 +6,13 @@ use crate::k_pke::Z256;
 use crate::ntt::multiply_ntts;
 use crate::Q;
 
-/// Function H from line 746 on page 17
-pub fn h(bytes: &[u8]) -> [u8; 32] {
-    let mut hasher = Sha3_256::new();
-    Digest::update(&mut hasher, bytes);
-    let digest = hasher.finalize();
-    digest.into()
-}
-
-/// Function H from line 746 on page 17
-pub fn j(bytes: &[u8], int: u8) -> [u8; 32] {
-    debug_assert_eq!(int, 32);
+/// Function PRF on line 726 of page 16  TODO:hardcode N1 to 2
+pub fn prf<const ETA1_64: usize>(s: &[u8; 32], b: u8) -> [u8; ETA1_64] {
     let mut hasher = Shake256::default();
-    hasher.update(bytes);
+    hasher.update(s);
+    hasher.update(&[b]);
     let mut reader = hasher.finalize_xof();
-    let mut result = [0u8; 32];
+    let mut result = [0u8; ETA1_64];
     reader.read(&mut result);
     result
 }
@@ -46,13 +38,21 @@ pub(crate) fn g(bytes: &[u8]) -> ([u8; 32], [u8; 32]) {
     (a, b)
 }
 
-/// Function PRF on line 726 of page 16  TODO:hardcode N1 to 2
-pub fn prf<const ETA1_64: usize>(s: &[u8; 32], b: u8) -> [u8; ETA1_64] {
+/// Function H from line 746 on page 17
+pub fn h(bytes: &[u8]) -> [u8; 32] {
+    let mut hasher = Sha3_256::new();
+    Digest::update(&mut hasher, bytes);
+    let digest = hasher.finalize();
+    digest.into()
+}
+
+/// Function J from line 746 on page 17
+pub fn j(bytes: &[u8], int: u8) -> [u8; 32] {
+    debug_assert_eq!(int, 32);
     let mut hasher = Shake256::default();
-    hasher.update(s);
-    hasher.update(&[b]);
+    hasher.update(bytes);
     let mut reader = hasher.finalize_xof();
-    let mut result = [0u8; ETA1_64];
+    let mut result = [0u8; 32];
     reader.read(&mut result);
     result
 }

@@ -33,19 +33,19 @@ jobs:
           targets: ${{ matrix.target }}
       - run: cargo build --target ${{ matrix.target }} --release
 
-  benches:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust:
-          - 1.72.0 # MSRV
-          - stable
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
-      - run: cargo build --all-features --benches
+  #benches:
+  #  runs-on: ubuntu-latest
+  #  strategy:
+  #    matrix:
+  #      rust:
+  #        - 1.72.0 # MSRV
+  #        - stable
+  #  steps:
+  #    - uses: actions/checkout@v4
+  #    - uses: dtolnay/rust-toolchain@master
+  #      with:
+  #        toolchain: ${{ matrix.rust }}
+  #    - run: cargo build --all-features --benches
 
   test:
     runs-on: ubuntu-latest

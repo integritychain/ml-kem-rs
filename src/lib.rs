@@ -1,54 +1,118 @@
+#![no_std]
 #![deny(clippy::pedantic)]
 #![deny(warnings)]
+#![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
+extern crate alloc;
+
+// Supports automatically clearing sensitive data on drop
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+// Functionality map per FIPS 203 draft
+//
+// Algorithm 2 BitsToBytes(b) on page 17                    --> byte_fns.rs
+// Algorithm 3 BytesToBits(B) on page 18                    --> byte_fns.rs
+// Algorithm 4 ByteEncoded(F) on page 19                    --> byte_fns.rs
+// Algorithm 5 ByteDecoded(B) on page 19                    --> byte_fns.rs
+// Algorithm 6 SampleNTT(B) on page 20                      --> sampling.rs
+// Algorithm 7 SamplePolyCBDη(B) on page 20                 --> sampling.rs
+// Algorithm 8 NTT(f) on page 22                            --> ntt.rs
+// Algorithm 9 NTT−1(fˆ) on page 23                         --> ntt.rs
+// Algorithm 10 MultiplyNTTs(fˆ,ĝ) on page 24               --> ntt.rs
+// Algorithm 11 BaseCaseMultiply(a0,a1,b0,b1,γ) on page 24  --> ntt.rs
+// Algorithm 12 K-PKE.KeyGen() on page 26                   --> k_pke.rs
+// Algorithm 13 K-PKE.Encrypt(ekPKE,m,r) on page 27         --> k_pke.rs
+// Algorithm 14 K-PKE.Decrypt(dkPKE,c) on page 28           --> k_pke.rs
+// Algorithm 15 ML-KEM.KeyGen() on page 29                  --> ml_kem.rs
+// Algorithm 16 ML-KEM.Encaps(ek) on page 30                --> ml_ke.rs
+// Algorithm 17 ML-KEM.Decaps(c,dk) on page 32              --> ml_kem.rs
+// PRF and XOF on page 16                                   --> helpers.rs
+// Three has functions: G, H, J on page 17                  --> helpers.rs
+// Compress and Decompress on page 18                       --> helpers.rs
+// The three parameter sets are modules in this file with macro code that
+//  connects them into the functionality in ml_kem.rs
 
 mod byte_fns;
 mod helpers;
 mod k_pke;
 mod ml_kem;
 mod ntt;
+mod sampling;
 
+// Relevant to all parameter sets
 const _N: u32 = 256;
 const Q: u32 = 3329;
+const ZETA: u32 = 17;
 const SSK_LEN: usize = 32;
 
-#[derive(Default, PartialEq, Debug, Zeroize, ZeroizeOnDrop)]
+// Relevant to all parameter sets
+/// The (opaque) secret key than can be deserialized by each party
+#[derive(Debug, Zeroize, ZeroizeOnDrop)]
 pub struct SharedSecretKey([u8; SSK_LEN]);
 
+// Conservative (constant-time) paranoia...
+impl PartialEq for SharedSecretKey {
+    fn eq(&self, other: &Self) -> bool {
+        let mut result = true;
+        for i in 0..self.0.len() {
+            result &= self.0[i] == other.0[i];
+        }
+        result
+    }
+}
+
+// This common functionality is injected into each parameter set module
 macro_rules! functionality {
     () => {
-        const ETA1_64: usize = ETA1 * 64;
-        const ETA2_64: usize = ETA2 * 64;
+        const ETA1_64: usize = ETA1 * 64; // Currently, Rust does not allow expressions involving
+        const ETA1_512: usize = ETA1 * 512; // constants in type expressions such as [u8, ETA1 * 64].
+        const ETA2_64: usize = ETA2 * 64; // So this is handled manually...
+        const ETA2_512: usize = ETA2 * 512;
         const DU_8: usize = DU * 256;
         const DU_256: usize = DU * 256;
+        const DU_32: usize = DU * 32;
         const DV_8: usize = DV * 256;
+        const DV_32: usize = DV * 32;
         const DV_256: usize = DV * 256;
 
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
+        /// Correctly sized encapsulation key specific to the target parameter set.
         #[derive(Zeroize, ZeroizeOnDrop)]
         pub struct EncapsKey([u8; EK_LEN]);
 
+        /// Correctly sized decapsulation key specific to the target parameter set.
         #[derive(Zeroize, ZeroizeOnDrop)]
         pub struct DecapsKey([u8; DK_LEN]);
 
+        /// Correctly sized ciphertext specific to the target parameter set.
         #[derive(Zeroize, ZeroizeOnDrop)]
         pub struct CipherText([u8; CT_LEN]);
 
+        /// Per FIPS 203, the key generation algorithm ML-KEM.KeyGen for ML-KEM (Algorithm 15)
+        /// accepts no input, utilizes randomness, and produces an encapsulation key and a
+        /// decapsulation key. While the encapsulation key can be made public, the decapsulation key
+        /// must remain private. This outputs of this function are opaque structs specific to a
+        /// target parameter set.
         #[must_use]
         pub fn key_gen() -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            ml_kem::key_gen::<K, ETA1, ETA1_64>(&mut ek.0, &mut dk.0);
+            ml_kem::key_gen::<K, ETA1, ETA1_64, ETA1_512>(&mut ek.0, &mut dk.0);
             (ek, dk)
         }
 
+        /// The `new_ek` function deserializes a byte array of the correct length into an
+        /// encapsulation key. The correct length of the input byte array is specific to a target
+        /// parameter set and the output is an opaque struct.
         #[must_use]
         pub fn new_ek(bytes: [u8; EK_LEN]) -> EncapsKey {
             EncapsKey(bytes)
         }
 
+        /// The `new_ct` function deserializes a byte array of the correct length into an opaque
+        /// cipher text value. The correct length of the input byte array is specific to a target
+        /// parameter set and the output is an opaque struct.
         #[must_use]
         pub fn new_ct(bytes: [u8; CT_LEN]) -> CipherText {
             CipherText(bytes)
@@ -59,14 +123,21 @@ macro_rules! functionality {
                 EncapsKey([0u8; EK_LEN])
             }
 
+            /// Per FIPS 203, the encapsulation algorithm ML-KEM.Encaps of ML-KEM (Algorithm 16)
+            /// accepts an encapsulation key as input, requires randomness, and outputs a ciphertext
+            /// and a shared key. The inputs and outputs to this function are opaque structs
+            /// specific to a target parameter set.
             #[must_use]
             pub fn encaps(&self) -> (SharedSecretKey, CipherText) {
                 let (ek, mut ct) = (EncapsKey::default(), CipherText::default());
-                let ssk = ml_kem::encaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DU_256, DV, DV_256>(&ek.0, &mut ct.0);
+                let ssk = ml_kem::encaps::<K, ETA1, ETA1_64, ETA1_512, ETA2, ETA2_64, ETA2_512, DU, DU_256, DV, DV_256>(
+                    &ek.0, &mut ct.0,
+                );
                 (ssk, ct)
             }
 
             #[must_use]
+            /// The `to_bytes` function deserializes an encapsulation key into a byte array.
             pub fn to_bytes(&self) -> [u8; EK_LEN] {
                 self.0.clone()
             }
@@ -78,8 +149,28 @@ macro_rules! functionality {
             }
 
             #[must_use]
+            /// Per FIPS 203, the decapsulation algorithm ML-KEM.Decaps of ML-KEM (Algorithm 16)
+            /// accepts a decapsulation key and a ML-KEM ciphertext as input, does not use any
+            /// randomness, and outputs a shared secret. The inputs and outputs to this function are
+            /// opaque structs specific to a target parameter set.
             pub fn decaps(&self, ct: &CipherText) -> SharedSecretKey {
-                ml_kem::decaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DU_8, DU_256, DV, DV_8, DV_256>(&self.0, &ct.0)
+                ml_kem::decaps::<
+                    K,
+                    ETA1,
+                    ETA1_64,
+                    ETA1_512,
+                    ETA2,
+                    ETA2_64,
+                    ETA2_512,
+                    DU,
+                    DU_8,
+                    DU_32,
+                    DU_256,
+                    DV,
+                    DV_8,
+                    DV_32,
+                    DV_256,
+                >(&self.0, &ct.0)
             }
         }
 
@@ -88,6 +179,7 @@ macro_rules! functionality {
                 CipherText([0u8; CT_LEN])
             }
 
+            /// The `to_bytes` function deserializes a cipher text into a byte array.
             #[must_use]
             pub fn to_bytes(&self) -> [u8; CT_LEN] {
                 self.0.clone()
@@ -96,6 +188,7 @@ macro_rules! functionality {
     };
 }
 
+///  ML-KEM-512 is claimed to be in security category 1, see table 2 & 3 on page 33
 pub mod ml_kem_512 {
     use crate::{ml_kem, SharedSecretKey};
 
@@ -111,6 +204,7 @@ pub mod ml_kem_512 {
     functionality!();
 }
 
+/// ML-KEM-768 is claimed to be in security category 3, see table 2 & 3 on page 33
 pub mod ml_kem_768 {
     use crate::{ml_kem, SharedSecretKey};
 
@@ -126,6 +220,7 @@ pub mod ml_kem_768 {
     functionality!();
 }
 
+/// ML-KEM-1024 is claimed to be in security category 5, see table 2 & 3 on page 33
 pub mod ml_kem_1024 {
     use crate::{ml_kem, SharedSecretKey};
 
