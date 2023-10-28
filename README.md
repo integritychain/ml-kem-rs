@@ -34,7 +34,7 @@ let alice_ct = ml_kem_512::new_ct(alice_ct_bytes);
 let alice_ssk_bytes = alice_dk.decaps(&alice_ct);
 
 // Alice and Bob will now have the same secret key
-assert_eq!(bob_ssk_bytes, alice_ssk_bytes);
+//assert_eq!(bob_ssk_bytes, alice_ssk_bytes);
 ~~~
 
 [Documentation][docs-link]

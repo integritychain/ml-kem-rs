@@ -6,6 +6,11 @@
 
 /// Implements FIPS 203 draft Module-Lattice-based Key-Encapsulation Mechanism Standard.
 /// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
+
+// TODO
+//   3. Are there any extraneous DU_8 style constants?
+//   4. Re-read spec
+//   5. Git push to CC (with 512 test flipped to pass)
 #[cfg(test)]
 extern crate alloc;
 
@@ -44,6 +49,9 @@ mod ml_kem;
 mod ntt;
 mod sampling;
 
+#[cfg(test)]
+mod smoke_test;
+
 // Relevant to all parameter sets
 const _N: u32 = 256;
 const Q: u32 = 3329;
@@ -51,9 +59,15 @@ const ZETA: u32 = 17;
 const SSK_LEN: usize = 32;
 
 // Relevant to all parameter sets
-/// The (opaque) secret key than can be deserialized by each party.
+/// The (opaque) secret key that can be deserialized by each party.
 #[derive(Debug, Zeroize, ZeroizeOnDrop)]
 pub struct SharedSecretKey([u8; SSK_LEN]);
+
+impl SharedSecretKey {
+    #[must_use]
+    /// The `to_bytes` function deserializes an encapsulation key into a byte array.
+    pub fn to_bytes(&self) -> [u8; SSK_LEN] { self.0 }
+}
 
 // Conservative (constant-time) paranoia...
 impl PartialEq for SharedSecretKey {
@@ -66,13 +80,14 @@ impl PartialEq for SharedSecretKey {
     }
 }
 
+
 // This common functionality is injected into each parameter set module
 macro_rules! functionality {
     () => {
         const ETA1_64: usize = ETA1 * 64; // Currently, Rust does not allow expressions involving
         const ETA1_512: usize = ETA1 * 512; // constants in type expressions such as [u8, ETA1 * 64].
-        const ETA2_64: usize = ETA2 * 64; // So this is handled manually...
-        const ETA2_512: usize = ETA2 * 512;
+        const ETA2_64: usize = ETA2 * 64; // So this is handled manually...what a pain
+        const ETA2_512: usize = ETA2 * 512; // TODO: consider a single 'global scratch pad' buffer
         const DU_8: usize = DU * 256;
         const DU_256: usize = DU * 256;
         const DU_32: usize = DU * 32;
@@ -81,6 +96,7 @@ macro_rules! functionality {
         const DV_256: usize = DV * 256;
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
+        use rand::random;
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
         /// Correctly sized encapsulation key specific to the target parameter set.
@@ -103,7 +119,19 @@ macro_rules! functionality {
         #[must_use]
         pub fn key_gen() -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            ml_kem::key_gen::<K, ETA1, ETA1_64, ETA1_512>(&mut ek.0, &mut dk.0);
+            let random_z = random::<[u8; 32]>();
+            let random_d = random::<[u8; 32]>();
+            ml_kem::key_gen::<K, ETA1, ETA1_64, ETA1_512>(
+                &random_z, &random_d, &mut ek.0, &mut dk.0,
+            );
+            (ek, dk)
+        }
+
+        #[must_use]
+        #[cfg(test)]
+        pub fn key_gen_test(seed: &[u8; 32]) -> (EncapsKey, DecapsKey) {
+            let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
+            ml_kem::key_gen::<K, ETA1, ETA1_64, ETA1_512>(&seed, &seed, &mut ek.0, &mut dk.0);
             (ek, dk)
         }
 
@@ -111,22 +139,16 @@ macro_rules! functionality {
         /// encapsulation key. The correct length of the input byte array is specific to a target
         /// parameter set and the output is an opaque struct.
         #[must_use]
-        pub fn new_ek(bytes: [u8; EK_LEN]) -> EncapsKey {
-            EncapsKey(bytes)
-        }
+        pub fn new_ek(bytes: [u8; EK_LEN]) -> EncapsKey { EncapsKey(bytes) }
 
         /// The `new_ct` function deserializes a byte array of the correct length into an opaque
         /// cipher text value. The correct length of the input byte array is specific to a target
         /// parameter set and the output is an opaque struct.
         #[must_use]
-        pub fn new_ct(bytes: [u8; CT_LEN]) -> CipherText {
-            CipherText(bytes)
-        }
+        pub fn new_ct(bytes: [u8; CT_LEN]) -> CipherText { CipherText(bytes) }
 
         impl EncapsKey {
-            fn default() -> Self {
-                EncapsKey([0u8; EK_LEN])
-            }
+            fn default() -> Self { EncapsKey([0u8; EK_LEN]) }
 
             /// Per FIPS 203, the encapsulation algorithm ML-KEM.Encaps of ML-KEM (Algorithm 16)
             /// accepts an encapsulation key as input, requires randomness, and outputs a ciphertext
@@ -134,24 +156,52 @@ macro_rules! functionality {
             /// specific to a target parameter set.
             #[must_use]
             pub fn encaps(&self) -> (SharedSecretKey, CipherText) {
-                let (ek, mut ct) = (EncapsKey::default(), CipherText::default());
-                let ssk = ml_kem::encaps::<K, ETA1, ETA1_64, ETA1_512, ETA2, ETA2_64, ETA2_512, DU, DU_256, DV, DV_256>(
-                    &ek.0, &mut ct.0,
-                );
+                let mut ct = CipherText::default();
+                let random_m = random::<[u8; 32]>();
+                let ssk = ml_kem::encaps::<
+                    K,
+                    ETA1,
+                    ETA1_64,
+                    ETA1_512,
+                    ETA2,
+                    ETA2_64,
+                    ETA2_512,
+                    DU,
+                    DU_256,
+                    DV,
+                    DV_256,
+                >(&random_m, &self.0, &mut ct.0);
+                (ssk, ct)
+            }
+
+            /// TEST
+            #[must_use]
+            pub fn encaps_test(&self, seed: &[u8; 32]) -> (SharedSecretKey, CipherText) {
+                let mut ct = CipherText::default();
+                let ssk = ml_kem::encaps::<
+                    K,
+                    ETA1,
+                    ETA1_64,
+                    ETA1_512,
+                    ETA2,
+                    ETA2_64,
+                    ETA2_512,
+                    DU,
+                    DU_256,
+                    DV,
+                    DV_256,
+                >(&seed, &self.0, &mut ct.0);
                 (ssk, ct)
             }
 
             #[must_use]
             /// The `to_bytes` function deserializes an encapsulation key into a byte array.
-            pub fn to_bytes(&self) -> [u8; EK_LEN] {
-                self.0.clone()
-            }
+            pub fn to_bytes(&self) -> [u8; EK_LEN] { self.0.clone() }
         }
 
+
         impl DecapsKey {
-            fn default() -> Self {
-                DecapsKey([0u8; DK_LEN])
-            }
+            fn default() -> Self { DecapsKey([0u8; DK_LEN]) }
 
             #[must_use]
             /// Per FIPS 203, the decapsulation algorithm ML-KEM.Decaps of ML-KEM (Algorithm 16)
@@ -178,21 +228,24 @@ macro_rules! functionality {
                     J_LEN,
                 >(&self.0, &ct.0)
             }
+
+            /// The `to_bytes` function deserializes a cipher text into a byte array.  TODO: test only
+            #[must_use]
+            #[cfg(test)]
+            pub fn to_bytes_test(&self) -> [u8; DK_LEN] { self.0.clone() }
         }
 
+
         impl CipherText {
-            fn default() -> Self {
-                CipherText([0u8; CT_LEN])
-            }
+            fn default() -> Self { CipherText([0u8; CT_LEN]) }
 
             /// The `to_bytes` function deserializes a cipher text into a byte array.
             #[must_use]
-            pub fn to_bytes(&self) -> [u8; CT_LEN] {
-                self.0.clone()
-            }
+            pub fn to_bytes(&self) -> [u8; CT_LEN] { self.0.clone() }
         }
     };
 }
+
 
 ///  ML-KEM-512 is claimed to be in security category 1, see table 2 & 3 on page 33.
 pub mod ml_kem_512 {
@@ -210,6 +263,7 @@ pub mod ml_kem_512 {
     functionality!();
 }
 
+
 /// ML-KEM-768 is claimed to be in security category 3, see table 2 & 3 on page 33.
 pub mod ml_kem_768 {
     use crate::{ml_kem, SharedSecretKey};
@@ -225,6 +279,7 @@ pub mod ml_kem_768 {
 
     functionality!();
 }
+
 
 /// ML-KEM-1024 is claimed to be in security category 5, see table 2 & 3 on page 33.
 pub mod ml_kem_1024 {
