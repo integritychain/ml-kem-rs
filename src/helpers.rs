@@ -61,7 +61,7 @@ pub(crate) fn mat_t_vec_mul<const K: usize>(
     y_hat
 }
 
-// Vector dot product; See top of page 10, third row: z_dat = u_hatT mul v_hat
+/// Vector dot product; See top of page 10, third row: z_dat = u_hatT mul v_hat
 #[must_use]
 pub(crate) fn dot_t_prod<const K: usize>(
     u_hat: &[[Z256; 256]; K], v_hat: &[[Z256; 256]; K],

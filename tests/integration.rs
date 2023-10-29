@@ -22,7 +22,7 @@ fn test_expected_flow_512() {
     let alice_ssk_bytes = alice_dk.decaps(&alice_ct);
 
     // Each party obtains the same shared secret key
-    assert_ne!(bob_ssk_bytes, alice_ssk_bytes)
+    assert_eq!(bob_ssk_bytes, alice_ssk_bytes)
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn test_expected_flow_768() {
     let alice_ssk_bytes = alice_dk.decaps(&alice_ct);
 
     // ne for now since values are fixed deltas
-    assert_ne!(bob_ssk_bytes, alice_ssk_bytes)
+    assert_eq!(bob_ssk_bytes, alice_ssk_bytes)
 }
 
 #[test]
@@ -72,5 +72,5 @@ fn test_expected_flow_1024() {
     let alice_ssk_bytes = alice_dk.decaps(&alice_ct);
 
     // ne for now since values are fixed deltas
-    assert_ne!(bob_ssk_bytes, alice_ssk_bytes)
+    assert_eq!(bob_ssk_bytes, alice_ssk_bytes)
 }

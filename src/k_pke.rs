@@ -267,7 +267,7 @@ pub(crate) fn k_pke_decrypt<
     // 1: c1 ← c[0 : 32du k]
     let c1 = &ct[0..32 * DU * K];
 
-    // 2: c2 ← c[32du k : 32(du*k + dv )]
+    // 2: c2 ← c[32du k : 32(du*k + dv)]
     let c2 = &ct[32 * DU * K..32 * (DU * K + DV)];
 
     // 3: 3: u ← Decompress_{du}(ByteDecode_{du}(c_1))      ▷ ByteDecode_{du} invoked k times
@@ -283,15 +283,21 @@ pub(crate) fn k_pke_decrypt<
     decompress::<DV>(&mut v);
 
     // 5: s_hat ← ByteDecode_{12}(dk_{PKE{)
-    let mut s_hat = [Z256(0); 256];
-    byte_decode::<12, { 12 * 256 }>(&dk[0..384], &mut s_hat);
+    let mut s_hat = [[Z256(0); 256]; K];   // TODO: recheck the dimensions of s_hat
+    for i in 0..K {
+        byte_decode::<12, { 12 * 256 }>(&dk[384 * i..384 * (i + 1)], &mut s_hat[i]);
+    }
 
     // 6: w ← v − NTT−1 (ŝ⊺ ◦ NTT(u))           ▷ NTT−1 and NTT invoked k times
     let mut w = [Z256(0); 256];
+    let mut ntt_u = [[Z256(0); 256]; K];
     #[allow(clippy::needless_range_loop)]
     for i in 0..K {
-        let xx = mat_t_vec_mul(&[[s_hat]], &[ntt(&u[i])]); // TODO: UNLIKELY TO BE CORRECT
-        let yy = ntt_inv(&xx[0]);
+        ntt_u[i] = ntt(&u[i]);
+    }
+    let st_ntt_u = dot_t_prod(&s_hat, &ntt_u);
+    for _i in 0..K {
+        let yy = ntt_inv(&st_ntt_u);
         for i in 0..256 {
             w[i].set_u16((Q + v[i].get_u32() - yy[i].get_u32()) % Q);
         }
