@@ -1,13 +1,14 @@
 use crate::byte_fns::{byte_decode, byte_encode};
 use crate::helpers::{g, h, j};
-use crate::k_pke::{k_pke_decrypt, Z256};
+use crate::k_pke::k_pke_decrypt;
 use crate::SharedSecretKey;
+use crate::types::Z256;
 
 use super::k_pke::{k_pke_encrypt, k_pke_key_gen};
 
-// Algorithm 15 `ML-KEM.KeyGen()` on page 29.
-// Generates an encapsulation key and a corresponding decapsulation key.
-pub(crate) fn key_gen<
+/// Algorithm 15 `ML-KEM.KeyGen()` on page 29.
+/// Generates an encapsulation key and a corresponding decapsulation key.
+pub(crate) fn ml_kem_key_gen<
     const K: usize,
     const ETA1: usize,
     const ETA1_64: usize,
@@ -41,9 +42,9 @@ pub(crate) fn key_gen<
 }
 
 
-// Algorithm 16 `ML-KEM.Encaps(ek)` on page 30.
-// Uses the encapsulation key to generate a shared key and an associated ciphertext.
-pub(crate) fn encaps<
+/// Algorithm 16 `ML-KEM.Encaps(ek)` on page 30.
+/// Uses the encapsulation key to generate a shared key and an associated ciphertext.
+pub(crate) fn ml_kem_encaps<
     const K: usize,
     const ETA1: usize,
     const ETA1_64: usize,
@@ -64,7 +65,7 @@ pub(crate) fn encaps<
     assert_eq!(ek.len(), 384 * K + 32); // type check: array of length 384k + 32
 
     // modulus check: perform the computation ek ← ByteEncode12 (ByteDecode12(ek_tidle)
-    // note: after checking, we run with the original input (due to const array allocation); the last 32 bytes is rho TODO: confirm
+    // note: after checking, we run with the original input (due to const array allocation); the last 32 bytes is rho  // TODO: revisit
     let mut ek_hat = [Z256(0); 256];
     for i in 0..K {
         let mut ek_tilde = [0u8; 384];
@@ -93,10 +94,10 @@ pub(crate) fn encaps<
 }
 
 
-// Algorithm 17 `ML-KEM.Decaps(c, dk)` on page 32.
-// Uses the decapsulation key to produce a shared key from a ciphertext.
+/// Algorithm 17 `ML-KEM.Decaps(c, dk)` on page 32.
+/// Uses the decapsulation key to produce a shared key from a ciphertext.
 #[allow(clippy::similar_names)]
-pub(crate) fn decaps<
+pub(crate) fn ml_kem_decaps<
     const K: usize,
     const ETA1: usize,
     const ETA1_64: usize,
@@ -105,14 +106,11 @@ pub(crate) fn decaps<
     const ETA2_64: usize,
     const ETA2_512: usize,
     const DU: usize,
-    const DU_8: usize,
-    const DU_32: usize,
     const DU_256: usize,
     const DV: usize,
-    const DV_8: usize,
-    const DV_32: usize,
     const DV_256: usize,
     const J_LEN: usize,
+    const CT_LEN: usize
 >(
     dk: &[u8], ct: &[u8],
 ) -> SharedSecretKey {
@@ -160,7 +158,7 @@ pub(crate) fn decaps<
     let k_bar = j(&j_input);
 
     // 8: c′ ← K-PKE.Encrypt(ekPKE , m′ , r′ )      ▷ re-encrypt using the derived randomness r′
-    let mut c_prime = [0u8; 2768]; // TODO: Fix!!
+    let mut c_prime = [0u8; CT_LEN];
     k_pke_encrypt::<K, ETA1, ETA1_64, ETA1_512, ETA2, ETA2_64, ETA2_512, DU, DU_256, DV, DV_256>(
         ek_pke,
         &m_prime,

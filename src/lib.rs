@@ -8,9 +8,11 @@
 /// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
 
 // TODO
-//   3. Are there any extraneous DU_8 style constants?
-//   4. Re-read spec
-//   5. Git push to CC (with 512 test flipped to pass)
+//   3. Implement bench
+//   4. Fix github actions
+//   5. Review main Doc
+//   6. Git push to CC, publish as 0.1.1
+//   7. Re-read spec
 #[cfg(test)]
 extern crate alloc;
 
@@ -48,6 +50,7 @@ mod k_pke;
 mod ml_kem;
 mod ntt;
 mod sampling;
+mod types;
 
 #[cfg(test)]
 mod smoke_test;
@@ -88,11 +91,7 @@ macro_rules! functionality {
         const ETA1_512: usize = ETA1 * 512; // constants in type expressions such as [u8, ETA1 * 64].
         const ETA2_64: usize = ETA2 * 64; // So this is handled manually...what a pain
         const ETA2_512: usize = ETA2 * 512; // TODO: consider a single 'global scratch pad' buffer
-        const DU_8: usize = DU * 256;
         const DU_256: usize = DU * 256;
-        const DU_32: usize = DU * 32;
-        const DV_8: usize = DV * 256;
-        const DV_32: usize = DV * 32;
         const DV_256: usize = DV * 256;
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
@@ -121,17 +120,18 @@ macro_rules! functionality {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
             let random_z = random::<[u8; 32]>();
             let random_d = random::<[u8; 32]>();
-            ml_kem::key_gen::<K, ETA1, ETA1_64, ETA1_512>(
+            ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(
                 &random_z, &random_d, &mut ek.0, &mut dk.0,
             );
             (ek, dk)
         }
 
+        /// Test only access to seed
         #[must_use]
         #[cfg(test)]
         pub fn key_gen_test(seed: &[u8; 32]) -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            ml_kem::key_gen::<K, ETA1, ETA1_64, ETA1_512>(&seed, &seed, &mut ek.0, &mut dk.0);
+            ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(&seed, &seed, &mut ek.0, &mut dk.0);
             (ek, dk)
         }
 
@@ -158,7 +158,7 @@ macro_rules! functionality {
             pub fn encaps(&self) -> (SharedSecretKey, CipherText) {
                 let mut ct = CipherText::default();
                 let random_m = random::<[u8; 32]>();
-                let ssk = ml_kem::encaps::<
+                let ssk = ml_kem::ml_kem_encaps::<
                     K,
                     ETA1,
                     ETA1_64,
@@ -174,11 +174,11 @@ macro_rules! functionality {
                 (ssk, ct)
             }
 
-            /// TEST
+            /// Test only access to seed
             #[must_use]
             pub fn encaps_test(&self, seed: &[u8; 32]) -> (SharedSecretKey, CipherText) {
                 let mut ct = CipherText::default();
-                let ssk = ml_kem::encaps::<
+                let ssk = ml_kem::ml_kem_encaps::<
                     K,
                     ETA1,
                     ETA1_64,
@@ -209,7 +209,7 @@ macro_rules! functionality {
             /// randomness, and outputs a shared secret. The inputs and outputs to this function are
             /// opaque structs specific to a target parameter set.
             pub fn decaps(&self, ct: &CipherText) -> SharedSecretKey {
-                ml_kem::decaps::<
+                ml_kem::ml_kem_decaps::<
                     K,
                     ETA1,
                     ETA1_64,
@@ -218,18 +218,15 @@ macro_rules! functionality {
                     ETA2_64,
                     ETA2_512,
                     DU,
-                    DU_8,
-                    DU_32,
                     DU_256,
                     DV,
-                    DV_8,
-                    DV_32,
                     DV_256,
                     J_LEN,
+                    CT_LEN
                 >(&self.0, &ct.0)
             }
 
-            /// The `to_bytes` function deserializes a cipher text into a byte array.  TODO: test only
+            /// The `to_bytes` function deserializes a cipher text into a byte array.
             #[must_use]
             #[cfg(test)]
             pub fn to_bytes_test(&self) -> [u8; DK_LEN] { self.0.clone() }
@@ -248,6 +245,7 @@ macro_rules! functionality {
 
 
 ///  ML-KEM-512 is claimed to be in security category 1, see table 2 & 3 on page 33.
+#[cfg(feature = "ml_kem_512")]
 pub mod ml_kem_512 {
     use crate::{ml_kem, SharedSecretKey};
 
@@ -265,6 +263,7 @@ pub mod ml_kem_512 {
 
 
 /// ML-KEM-768 is claimed to be in security category 3, see table 2 & 3 on page 33.
+#[cfg(feature = "ml_kem_768")]
 pub mod ml_kem_768 {
     use crate::{ml_kem, SharedSecretKey};
 
@@ -282,6 +281,7 @@ pub mod ml_kem_768 {
 
 
 /// ML-KEM-1024 is claimed to be in security category 5, see table 2 & 3 on page 33.
+#[cfg(feature = "ml_kem_1024")]
 pub mod ml_kem_1024 {
     use crate::{ml_kem, SharedSecretKey};
 

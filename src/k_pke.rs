@@ -5,34 +5,10 @@ use crate::helpers::{
 use crate::ntt::{ntt, ntt_inv};
 use crate::Q;
 use crate::sampling::{sample_ntt, sample_poly_cbd};
+use crate::types::Z256;
 
-// Stored as u16, but arithmetic as u32 (so we can multiply/reduce/etc)
-#[derive(Clone, Copy)]
-pub struct Z256(pub u16);
-
-impl Z256 {
-    pub fn get_u32(self) -> u32 { u32::from(self.0) }
-
-    pub fn get_u16(self) -> u16 { self.0 }
-
-    pub fn set_u16(&mut self, a: u32) {
-        //debug_assert!(a < Q); //u32::from(u16::MAX));
-        self.0 = u16::try_from(a % Q).unwrap(); // TODO: Revisit
-    }
-
-    #[allow(dead_code)] // stitch in when we get overall correct
-    pub fn mul(self, other: Self) -> Self {
-        let prod = u64::from(self.0) * u64::from(other.0);
-        let div = prod * (2u64.pow(24) / (u64::from(Q)));
-        let (diff, borrow) = div.overflowing_sub(u64::from(Q));
-        let result = if borrow { div } else { diff }; // TODO: CT MUX
-        Self(u16::try_from(result).unwrap()) // TODO: Revisit
-    }
-}
-
-
-// Algorithm 12 `K-PKE.KeyGen()` on page 26.
-// Generates an encryption key and a corresponding decryption key.
+/// Algorithm 12 `K-PKE.KeyGen()` on page 26.
+/// Generates an encryption key and a corresponding decryption key.
 #[allow(clippy::similar_names, clippy::module_name_repetitions)]
 pub fn k_pke_key_gen<
     const K: usize,
@@ -124,8 +100,8 @@ pub fn k_pke_key_gen<
 }
 
 
-// Algorithm 13 `K-PKE.Encrypt(ekPKE , m, r)` on page 27.
-// Uses the encryption key to encrypt a plaintext message using the randomness r.
+/// Algorithm 13 `K-PKE.Encrypt(ekPKE , m, r)` on page 27.
+/// Uses the encryption key to encrypt a plaintext message using the randomness r.
 #[allow(clippy::many_single_char_names)]
 pub(crate) fn k_pke_encrypt<
     const K: usize,
@@ -245,8 +221,8 @@ pub(crate) fn k_pke_encrypt<
 }
 
 
-// Algorithm 14 `K-PKE.Decrypt(dkPKE, c)` on page 28.
-// Uses the decryption key to decrypt a ciphertext.
+/// Algorithm 14 `K-PKE.Decrypt(dkPKE, c)` on page 28.
+/// Uses the decryption key to decrypt a ciphertext.
 pub(crate) fn k_pke_decrypt<
     const K: usize,
     const DU: usize,
@@ -283,7 +259,7 @@ pub(crate) fn k_pke_decrypt<
     decompress::<DV>(&mut v);
 
     // 5: s_hat ← ByteDecode_{12}(dk_{PKE{)
-    let mut s_hat = [[Z256(0); 256]; K];   // TODO: recheck the dimensions of s_hat
+    let mut s_hat = [[Z256(0); 256]; K];
     for i in 0..K {
         byte_decode::<12, { 12 * 256 }>(&dk[384 * i..384 * (i + 1)], &mut s_hat[i]);
     }

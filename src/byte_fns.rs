@@ -1,7 +1,8 @@
-use crate::{k_pke::Z256, Q};
+use crate::Q;
+use crate::types::Z256;
 
-// Algorithm 2 `BitsToBytes(b)` on page 17.
-// Converts a bit string (of length a multiple of eight) into an array of bytes.
+/// Algorithm 2 `BitsToBytes(b)` on page 17.
+/// Converts a bit string (of length a multiple of eight) into an array of bytes.
 pub(crate) fn bits_to_bytes(bits: &[u8], bytes: &mut [u8]) {
     // Input: bit array b ∈ {0,1}^{8·ℓ}
     // Output: byte array B ∈ B^ℓ
@@ -18,8 +19,8 @@ pub(crate) fn bits_to_bytes(bits: &[u8], bytes: &mut [u8]) {
 } // 5: return B
 
 
-// Algorithm 3 `BytesToBits(B)` on page 18.
-// Performs the inverse of `BitsToBytes`, converting a byte array into a bit array.
+/// Algorithm 3 `BytesToBits(B)` on page 18.
+/// Performs the inverse of `BitsToBytes`, converting a byte array into a bit array.
 pub(crate) fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) {
     // Input: byte array B ∈ B^ℓ
     // Output: bit array b ∈ {0,1}^{8·ℓ}
@@ -42,8 +43,8 @@ pub(crate) fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) {
 } // 7: return b
 
 
-// Algorithm 4 `ByteEncode<d>(F)` on page 19.
-// Encodes an array of d-bit integers into a byte array, for 1 ≤ d ≤ 12.
+/// Algorithm 4 `ByteEncode<d>(F)` on page 19.
+/// Encodes an array of d-bit integers into a byte array, for 1 ≤ d ≤ 12.
 pub(crate) fn byte_encode<const D: usize, const D_256: usize>(
     integers_f: &[Z256; 256], bytes_b: &mut [u8],
 ) {
@@ -80,8 +81,8 @@ pub(crate) fn byte_encode<const D: usize, const D_256: usize>(
 } // 9: return B
 
 
-// Algorithm 5 `ByteDecode<d>(B)` on page 19.
-// Decodes a byte array into an array of d-bit integers, for 1 ≤ d ≤ 12.
+/// Algorithm 5 `ByteDecode<d>(B)` on page 19.
+/// Decodes a byte array into an array of d-bit integers, for 1 ≤ d ≤ 12.
 pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
     bytes_b: &[u8], integers_f: &mut [Z256; 256],
 ) {
@@ -123,7 +124,7 @@ mod tests {
     use rand::{Rng, SeedableRng};
 
     use crate::byte_fns::{bits_to_bytes, byte_decode, byte_encode, bytes_to_bits};
-    use crate::k_pke::Z256;
+    use crate::types::Z256;
 
     #[test]
     fn test_bytes_and_bits() {

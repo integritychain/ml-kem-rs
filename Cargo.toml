@@ -14,9 +14,17 @@ exclude = [".idea/*"]
 
 
 [dependencies]
-zeroize = {version = "1.6.0", features = ["zeroize_derive"]}
+zeroize = { version = "1.6.0", features = ["zeroize_derive"] }
 sha3 = "0.10.8"
 rand = "0.8.5"
+getrandom = { version = "0.2", features = ["js"] }
+
+
+[features]
+default = ["ml_kem_512", "ml_kem_768", "ml_kem_1024"]
+ml_kem_512 = []
+ml_kem_768 = []
+ml_kem_1024 = []
 
 
 [dev-dependencies]

@@ -1,11 +1,11 @@
 use sha3::digest::XofReader;
 
 use crate::byte_fns::bytes_to_bits;
-use crate::k_pke::Z256;
 use crate::Q;
+use crate::types::Z256;
 
-// Algorithm 6 `SampleNTT(B)` on page 20.
-// If the input is a stream of uniformly random bytes, the output is a uniformly random element of T_q.
+/// Algorithm 6 `SampleNTT(B)` on page 20.
+/// If the input is a stream of uniformly random bytes, the output is a uniformly random element of T_q.
 #[must_use]
 pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
     // Input: byte stream B ∈ B^{∗}
@@ -53,8 +53,8 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
 }
 
 
-// Algorithm 7 `SamplePolyCBDη(B)` on page 20.
-// If the input is a stream of uniformly random bytes, outputs a sample from the distribution Dη (Rq ).
+/// Algorithm 7 `SamplePolyCBDη(B)` on page 20.
+/// If the input is a stream of uniformly random bytes, outputs a sample from the distribution Dη (Rq ).
 #[must_use]
 pub fn sample_poly_cbd<const ETA: usize, const ETA_64: usize, const ETA_512: usize>(
     byte_array_b: &[u8],
