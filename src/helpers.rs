@@ -60,6 +60,7 @@ pub(crate) fn mat_t_vec_mul<const K: usize>(
     y_hat
 }
 
+
 /// Vector dot product; See top of page 10, third row: `z_hat` = `u_hat^T` mul `v_hat`
 #[must_use]
 pub(crate) fn dot_t_prod<const K: usize>(
@@ -137,7 +138,7 @@ pub(crate) fn j(bytes: &[u8]) -> [u8; 32] {
 
 /// BitRev7(i) from page 21 line 839-840.
 /// Returns the integer represented by bit-reversing the unsigned 7-bit value that
-/// corresponds to the input integer i ∈ {0, . . . , 127}.
+/// corresponds to the input integer i ∈ {0, . . . , 127}.  (horrible perf)
 #[must_use]
 pub(crate) fn bit_rev_7(a: u8) -> u8 {
     ((a >> 6) & 1)

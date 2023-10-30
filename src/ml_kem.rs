@@ -22,12 +22,10 @@ pub(crate) fn ml_kem_key_gen<
     debug_assert_eq!(dk.len(), 768 * K + 96);
 
     // 1: z ←− B32         ▷ z is 32 random bytes (see Section 3.3)
-    //let z = random::<[u8; 32]>();
     let z = random_z;
 
     // 2: (ek_{PKE}, dk_{PKE}) ← K-PKE.KeyGen()     ▷ run key generation for K-PKE
     let p1 = 384 * K;
-
     k_pke_key_gen::<K, ETA1, ETA1_64, ETA1_512>(&random_b, ek, &mut dk[..p1]); // 3: ek ← ekPKE
 
     // 4: dk ← (dkPKE ∥ek∥H(ek)∥z)  (first concat element is done above alongside ek)

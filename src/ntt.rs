@@ -18,8 +18,10 @@ pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
 
     // 3: for (len ← 128; len ≥ 2; len ← len/2)
     for len in [128, 64, 32, 16, 8, 4, 2] {
+        //
         // 4: for (start ← 0; start < 256; start ← start + 2 · len)
         for start in (0..256).step_by(2 * len) {
+            //
             // 5: zeta ← ζ^{BitRev7 (k)} mod q
             let zeta = pow_mod_q(ZETA, bit_rev_7(k));
 
@@ -28,6 +30,7 @@ pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
 
             // 7: for ( j ← start; j < start + len; j ++)
             for j in start..(start + len) {
+                //
                 // 8: t ← zeta · f_hat[ j + len]           ▷ steps 8-10 done modulo q
                 let t = zeta * f_hat[j + len].get_u32() % Q;
 
@@ -36,6 +39,7 @@ pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
 
                 // 10: f_hat[ j] ← f_hat[ j] + t
                 f_hat[j].set_u16((f_hat[j].get_u32() + t) % Q);
+                //
             } // 11: end for
         } // 12: end for
     } // 13: end for
@@ -82,9 +86,11 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
 
                 // 10: f [ j + len] ← zeta · ( f [ j + len] − t)
                 f[j + len].set_u16((zeta * (Q + f[j + len].get_u32() - t.get_u32())) % Q);
+                //
             } // 11: end for
         } // 12: end for
     } // 13: end for
+
     // 14: f ← f · 3303 mod q                   ▷ multiply every entry by 3303 ≡ 128^{−1} mod q
     f.iter_mut()
         .for_each(|item| item.set_u16(item.get_u32() * 3303 % Q));
@@ -105,6 +111,7 @@ pub fn multiply_ntts(f_hat: &[Z256; 256], g_hat: &[Z256; 256]) -> [Z256; 256] {
 
     // for (i ← 0; i < 128; i ++)
     for i in 0..128 {
+        //
         // 2: (h_hat[2i], h_hat[2i + 1]) ← BaseCaseMultiply( f_hat[2i], f_hat[2i + 1], g_hat[2i], g_hat[2i + 1], ζ^{2BitRev7(i) + 1})
         let (h_hat_2i, h_hat_2ip1) = base_case_multiply(
             f_hat[2 * i],

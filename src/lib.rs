@@ -7,9 +7,6 @@
 /// Implements FIPS 203 draft Module-Lattice-based Key-Encapsulation Mechanism Standard.
 /// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
 
-// TODO
-//   1. Fix github actions
-//   2. Tag, Git push to CC, publish as 0.1.1
 #[cfg(test)]
 extern crate alloc;
 
@@ -38,8 +35,8 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 // Three has functions: G, H, J on page 17                  --> helpers.rs
 // Compress and Decompress on page 18                       --> helpers.rs
 //
-// The three parameter sets are modules in this file with macro code that
-// connects them into the functionality in ml_kem.rs
+// The three parameter sets are modules in this file with injected macro code
+// that connects them into the functionality in ml_kem.rs
 
 mod byte_fns;
 mod helpers;
@@ -65,7 +62,7 @@ pub struct SharedSecretKey([u8; SSK_LEN]);
 
 impl SharedSecretKey {
     #[must_use]
-    /// The `to_bytes` function deserializes an encapsulation key into a byte array.
+    /// The `to_bytes` function deserializes a shared secret key into a byte array.
     pub fn to_bytes(&self) -> [u8; SSK_LEN] { self.0 }
 }
 
@@ -84,11 +81,11 @@ impl PartialEq for SharedSecretKey {
 // This common functionality is injected into each parameter set module
 macro_rules! functionality {
     () => {
-
+        // TODO: Implement a 'global scratch' struct rather than the weird lower-level stuff here
         const ETA1_64: usize = ETA1 * 64; // Currently, Rust does not allow expressions involving
         const ETA1_512: usize = ETA1 * 512; // constants in type expressions such as [u8, ETA1 * 64].
         const ETA2_64: usize = ETA2 * 64; // So this is handled manually...what a pain
-        const ETA2_512: usize = ETA2 * 512; // TODO: consider a single 'global scratch pad' buffer
+        const ETA2_512: usize = ETA2 * 512;
         const DU_256: usize = DU * 256;
         const DV_256: usize = DV * 256;
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
@@ -108,7 +105,7 @@ macro_rules! functionality {
         #[derive(Zeroize, ZeroizeOnDrop)]
         pub struct CipherText([u8; CT_LEN]);
 
-        /// Per FIPS 203, the key generation algorithm ML-KEM.KeyGen for ML-KEM (Algorithm 15)
+        /// Per FIPS 203, the key generation algorithm `ML-KEM.KeyGen` for ML-KEM (Algorithm 15)
         /// accepts no input, utilizes randomness, and produces an encapsulation key and a
         /// decapsulation key. While the encapsulation key can be made public, the decapsulation key
         /// must remain private. This outputs of this function are opaque structs specific to a
@@ -124,7 +121,7 @@ macro_rules! functionality {
             (ek, dk)
         }
 
-        /// Test only access to seed
+        /// Test only access to key generation seed
         #[must_use]
         #[cfg(test)]
         pub fn key_gen_test(seed: &[u8; 32]) -> (EncapsKey, DecapsKey) {
@@ -150,7 +147,7 @@ macro_rules! functionality {
         impl EncapsKey {
             fn default() -> Self { EncapsKey([0u8; EK_LEN]) }
 
-            /// Per FIPS 203, the encapsulation algorithm ML-KEM.Encaps of ML-KEM (Algorithm 16)
+            /// Per FIPS 203, the encapsulation algorithm `ML-KEM.Encaps` of ML-KEM (Algorithm 16)
             /// accepts an encapsulation key as input, requires randomness, and outputs a ciphertext
             /// and a shared key. The inputs and outputs to this function are opaque structs
             /// specific to a target parameter set.
@@ -174,7 +171,7 @@ macro_rules! functionality {
                 (ssk, ct)
             }
 
-            /// Test only access to seed
+            /// Test only access to encapsulation seed
             #[must_use]
             pub fn encaps_test(&self, seed: &[u8; 32]) -> (SharedSecretKey, CipherText) {
                 let mut ct = CipherText::default();
@@ -194,8 +191,8 @@ macro_rules! functionality {
                 (ssk, ct)
             }
 
-            #[must_use]
             /// The `to_bytes` function deserializes an encapsulation key into a byte array.
+            #[must_use]
             pub fn to_bytes(&self) -> [u8; EK_LEN] { self.0.clone() }
         }
 
@@ -203,11 +200,11 @@ macro_rules! functionality {
         impl DecapsKey {
             fn default() -> Self { DecapsKey([0u8; DK_LEN]) }
 
-            #[must_use]
             /// Per FIPS 203, the decapsulation algorithm ML-KEM.Decaps of ML-KEM (Algorithm 16)
             /// accepts a decapsulation key and a ML-KEM ciphertext as input, does not use any
             /// randomness, and outputs a shared secret. The inputs and outputs to this function are
             /// opaque structs specific to a target parameter set.
+            #[must_use]
             pub fn decaps(&self, ct: &CipherText) -> SharedSecretKey {
                 ml_kem::ml_kem_decaps::<
                     K,

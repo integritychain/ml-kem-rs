@@ -10,11 +10,14 @@ pub(crate) fn bits_to_bytes(bits: &[u8], bytes: &mut [u8]) {
     debug_assert_eq!(bits.len(), 8 * bytes.len()); // bit_array length is 8ℓ
 
     // 1: B ← (0, . . . , 0)  (returned mutable data struct is provided by the caller)
+    // (reconsider zeroing ... found one bug already)
 
     // 2: for (i ← 0; i < 8ℓ; i ++)
     for i in 0..bits.len() {
+        //
         // 3: B [⌊i/8⌋] ← B [⌊i/8⌋] + b[i] · 2^{i mod 8}
         bytes[i / 8] += bits[i] * 2u8.pow(u32::try_from(i).expect("too many bits") % 8);
+        //
     } // 4: end for
 } // 5: return B
 
@@ -29,15 +32,18 @@ pub(crate) fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) {
 
     // 1: for (i ← 0; i < ℓ; i ++)
     for i in 0..bytes.len() {
-        let mut byte = bytes[i];
+        //
+        let mut byte = bytes[i]; // for use in step 4 shifting
 
         // 2: for ( j ← 0; j < 8; j ++)
         for j in 0..8 {
+            //
             // 3: b[8i + j] ← B[i] mod 2
             bits[8 * i + j] = byte % 2;
 
             // 4: B[i] ← ⌊B[i]/2⌋
             byte /= 2;
+            //
         } // 5: end for
     } // 6: end for
 } // 7: return b
@@ -64,20 +70,25 @@ pub(crate) fn byte_encode<const D: usize, const D_256: usize>(
 
     // 1: for (i ← 0; i < 256; i ++)
     for i in 0..256 {
+        //
         // 2: a ← F[i]      ▷ a ∈ Z_{2^d}
         let mut a = integers_f[i].get_u16() % m_mod;
 
         // 3: for ( j ← 0; j < d; j ++)
         for j in 0..D {
+            //
             // 4: b[i · d + j] ← a mod 2        ▷ b ∈ {0, 1}^{256·d}
             bit_array[i * D + j] = (&a % 2) as u8;
 
             // 5: a ← (a − b[i · d + j])/2      ▷ note a − b[i · d + j] is always even.
             a = (a - u16::from(bit_array[i * D + j])) / 2;
+            //
         } // 6: end for
     } // 7: end for
+    //
     // 8: B ← BitsToBytes(b)
     bits_to_bytes(&bit_array, bytes_b);
+    //
 } // 9: return B
 
 
@@ -105,6 +116,7 @@ pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
 
     // 2: for (i ← 0; i < 256; i ++)
     for i in 0..256 {
+        //
         // 3: F[i] ← ∑^{d-1}_{j=0} b[i · d + j] · 2 mod m
         integers_f[i] = (0..D).fold(Z256(0), |acc: Z256, j| {
             Z256(
@@ -113,8 +125,10 @@ pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
                     % m_mod,
             )
         });
+        //
     } // 4: end for
 } // 5: return F
+
 
 #[cfg(test)]
 mod tests {

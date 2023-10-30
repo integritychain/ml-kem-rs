@@ -53,8 +53,7 @@ Rust [Documentation][docs-link]
 ## Security Notes
 
 This crate is functional and corresponds to the first initial public draft of FIPS 203.
-
-USE AT YOUR OWN RISK!
+This crate is still under construction/refinement -- USE AT YOUR OWN RISK!
 
 ## Supported Parameter Sets
 
