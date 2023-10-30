@@ -1,5 +1,8 @@
 use crate::Q;
 
+// While Z256 is nice, simple and correct, the performance is atrocious.
+// This will be addressed (particularly in matrix operations etc).
+
 /// Stored as u16, but arithmetic as u32 (so we can multiply/reduce/etc)
 #[derive(Clone, Copy)]
 pub struct Z256(pub u16);
@@ -14,7 +17,7 @@ impl Z256 {
         self.0 = u16::try_from(a % Q).unwrap(); // TODO: Revisit
     }
 
-    #[allow(dead_code)] // stitch in when we get overall correct
+    #[allow(dead_code)] // Barrett mult/reduce; Will be incorporated shortly...
     pub fn mul(self, other: Self) -> Self {
         let prod = u64::from(self.0) * u64::from(other.0);
         let div = prod * (2u64.pow(24) / (u64::from(Q)));

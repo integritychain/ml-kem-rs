@@ -8,11 +8,8 @@
 /// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
 
 // TODO
-//   3. Implement bench, fix-->CT
-//   4. Fix github actions
-//   5. Review main Doc; features: no_std, no alloc, minimal dependencies, CT
-//   6. Tag, Git push to CC, publish as 0.1.1
-//   7. Re-read spec
+//   1. Fix github actions
+//   2. Tag, Git push to CC, publish as 0.1.1
 #[cfg(test)]
 extern crate alloc;
 
@@ -87,6 +84,7 @@ impl PartialEq for SharedSecretKey {
 // This common functionality is injected into each parameter set module
 macro_rules! functionality {
     () => {
+
         const ETA1_64: usize = ETA1 * 64; // Currently, Rust does not allow expressions involving
         const ETA1_512: usize = ETA1 * 512; // constants in type expressions such as [u8, ETA1 * 64].
         const ETA2_64: usize = ETA2 * 64; // So this is handled manually...what a pain
@@ -249,6 +247,17 @@ macro_rules! functionality {
 ///  ML-KEM-512 is claimed to be in security category 1, see table 2 & 3 on page 33.
 #[cfg(feature = "ml_kem_512")]
 pub mod ml_kem_512 {
+    //!
+    //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
+    //!
+    //! Typical usage flow entails:
+    //! 1. The originator runs `key_gen()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
+    //! 2. The originator deserializes the encaps key via `encapsKey.to_bytes()` and sends to the remote party.
+    //! 3. The remote party serializes the bytes via `new_ek(<bytes>)` to get the shared secret key `ssk` and ciphertext `cipherText`.
+    //! 4. The remote party deserializes the cipertext via `cipherText.to_bytes()` and sends to the originator.
+    //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
+    //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
+
     use crate::{ml_kem, SharedSecretKey};
 
     const K: usize = 2;
@@ -267,6 +276,17 @@ pub mod ml_kem_512 {
 /// ML-KEM-768 is claimed to be in security category 3, see table 2 & 3 on page 33.
 #[cfg(feature = "ml_kem_768")]
 pub mod ml_kem_768 {
+    //!
+    //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
+    //!
+    //! Typical usage flow entails:
+    //! 1. The originator runs `key_gen()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
+    //! 2. The originator deserializes the encaps key via `encapsKey.to_bytes()` and sends to the remote party.
+    //! 3. The remote party serializes the bytes via `new_ek(<bytes>)` to get the shared secret key `ssk` and ciphertext `cipherText`.
+    //! 4. The remote party deserializes the cipertext via `cipherText.to_bytes()` and sends to the originator.
+    //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
+    //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
+
     use crate::{ml_kem, SharedSecretKey};
 
     const K: usize = 3;
@@ -285,6 +305,17 @@ pub mod ml_kem_768 {
 /// ML-KEM-1024 is claimed to be in security category 5, see table 2 & 3 on page 33.
 #[cfg(feature = "ml_kem_1024")]
 pub mod ml_kem_1024 {
+    //!
+    //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
+    //!
+    //! Typical usage flow entails:
+    //! 1. The originator runs `key_gen()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
+    //! 2. The originator deserializes the encaps key via `encapsKey.to_bytes()` and sends to the remote party.
+    //! 3. The remote party serializes the bytes via `new_ek(<bytes>)` to get the shared secret key `ssk` and ciphertext `cipherText`.
+    //! 4. The remote party deserializes the cipertext via `cipherText.to_bytes()` and sends to the originator.
+    //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
+    //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
+
     use crate::{ml_kem, SharedSecretKey};
 
     const K: usize = 4;

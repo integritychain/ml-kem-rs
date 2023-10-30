@@ -1,4 +1,4 @@
-# [IntegrityChain] FIPS 203 (Initial Public Draft): Module-Lattice-Based Key-Encapsulation Mechanism Standard
+# [IntegrityChain]: FIPS 203 Module-Lattice-Based Key-Encapsulation Mechanism Standard
 
 [![crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]
@@ -6,51 +6,53 @@
 ![Apache2/MIT licensed][license-image]
 ![Rust Version][rustc-image]
 
-[MlKem] Module-Lattice-Based Key-Encapsulation Mechanism Standard written in pure Rust.
+[FIPS 203] (Initial Public Draft) Module-Lattice-Based Key-Encapsulation Mechanism
+Standard written in pure Rust.
 
 This library implements the FIPS 203 **draft** standard in pure Rust with minimal and
 mainstream dependencies. All three security parameter sets are fully functional. The
 code does not require the standard library, e.g. `#[no_std]`, and has no heap
 allocations so will be suitable for WASM, embedded and bare-metal applications.
-Significant performance optimizations will be forthcoming.
+Significant performance optimizations are forthcoming.
 
-See: <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
+See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf> for a full
+description of the target functionality.
 
-The functionality is very simple to use, per the following example.
+The functionality is extremely simple to use, as demonstrated by the following example.
 
 ~~~rust
-// Use the desired target parameter set
-use ml_kem_rs::ml_kem_512; // Could also be ml_kem_1024 or ml_kem_768
+// Use the desired target parameter set.
+use ml_kem_rs::ml_kem_512; // Could also be ml_kem_768 or ml_kem_1024. 
 
-// Alice runs KeyGen, and then serializes the encaps key ek for Bob (to bytes)
+// Alice runs `key_gen()` and then serializes the encaps key `ek` for Bob (to bytes).
 let (alice_ek, alice_dk) = ml_kem_512::key_gen();
 let alice_ek_bytes = alice_ek.to_bytes();
 
-// Alice sends the encaps key ek_bytes to Bob
+// Alice sends the encaps key `ek_bytes` to Bob.
 let bob_ek_bytes = alice_ek_bytes;
 
-// Bob deserializes the encaps ek_bytes, runs Encaps, to get the shared secret 
-// and ciphertext ct. He serializes the ciphertext ct for Alice (to bytes)
+// Bob deserializes the encaps `ek_bytes` and then runs `encaps() to get the shared 
+// secret `ssk` and ciphertext `ct`. He serializes the ciphertext `ct` for Alice (to bytes).
 let bob_ek = ml_kem_512::new_ek(bob_ek_bytes);
 let (bob_ssk_bytes, bob_ct) = bob_ek.encaps();
 let bob_ct_bytes = bob_ct.to_bytes();
 
-// Bob sends the ciphertext ct_bytes to Alice
+// Bob sends the ciphertext `ct_bytes` to Alice
 let alice_ct_bytes = bob_ct_bytes;
 
-// Alice deserializes the ciphertext_ct and runs Decaps with decaps key
+// Alice deserializes the ciphertext `ct` and runs `decaps()` with her decaps key
 let alice_ct = ml_kem_512::new_ct(alice_ct_bytes);
-let alice_ssk_bytes = alice_dk.decaps( & alice_ct);
+let alice_ssk_bytes = alice_dk.decaps(&alice_ct);
 
 // Alice and Bob will now have the same secret key
 assert_eq!(bob_ssk_bytes, alice_ssk_bytes);
 ~~~
 
-[Documentation][docs-link]
+Rust [Documentation][docs-link]
 
 ## Security Notes
 
-This crate is under construction.
+This crate is functional and corresponds to the first initial public draft of FIPS 203.
 
 USE AT YOUR OWN RISK!
 
@@ -109,4 +111,4 @@ dual licensed as above, without any additional terms or conditions.
 
 [IntegrityChain]: https://github.com/integritychain/
 
-[MlKem]: https://csrc.nist.gov/pubs/fips/203/ipd
+[FIPS 203]: https://csrc.nist.gov/pubs/fips/203/ipd
