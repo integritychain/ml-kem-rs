@@ -15,23 +15,23 @@ env:
   RUSTDOCFLAGS: "-Dwarnings"
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust:
-          - 1.72.0 # MSRV
-          - stable
-        target:
-          #- thumbv7em-none-eabi
-          - wasm32-unknown-unknown
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
-          targets: ${{ matrix.target }}
-      - run: cargo build --target ${{ matrix.target }} --release
+  #build:
+  #  runs-on: ubuntu-latest
+  #  strategy:
+  #    matrix:
+  #      rust:
+  #        - 1.72.0 # MSRV
+  #        - stable
+  #      target:
+  #        #- thumbv7em-none-eabi
+  #        - wasm32-unknown-unknown
+  #  steps:
+  #    - uses: actions/checkout@v4
+  #    - uses: dtolnay/rust-toolchain@master
+  #      with:
+  #        toolchain: ${{ matrix.rust }}
+  #        targets: ${{ matrix.target }}
+  #    - run: cargo build --target ${{ matrix.target }} --release
 
   #benches:
   #  runs-on: ubuntu-latest

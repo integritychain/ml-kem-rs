@@ -97,9 +97,9 @@ dual licensed as above, without any additional terms or conditions.
 
 [docs-link]: https://docs.rs/ml-kem-rs/
 
-[build-image]: https://github.com/integritychain/ml-kem-rs/workflows/integration/badge.svg?branch=master&event=push
+[build-image]: https://github.com/integritychain/ml-kem-rs/workflows/test/badge.svg?branch=master&event=push
 
-[build-link]: https://github.com/integritychain/ml-kem-rs/actions?query=workflow%3Aintegration
+[build-link]: https://github.com/integritychain/ml-kem-rs/actions?query=workflow%3Atest
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
 
