@@ -28,3 +28,18 @@ ml_kem_1024 = []
 
 [dev-dependencies]
 rand_chacha = "0.3.1"
+criterion = "0.5.1"
+
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+
+[profile.bench]
+debug = 2
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = 3
+overflow-checks = false

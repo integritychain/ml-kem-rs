@@ -5,7 +5,7 @@ use crate::Q;
 use crate::types::Z256;
 
 /// Algorithm 6 `SampleNTT(B)` on page 20.
-/// If the input is a stream of uniformly random bytes, the output is a uniformly random element of T_q.
+/// If the input is a stream of uniformly random bytes, the output is a uniformly random element of `T_q`.
 #[must_use]
 pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
     // Input: byte stream B ∈ B^{∗}

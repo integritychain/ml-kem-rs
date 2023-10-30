@@ -8,10 +8,10 @@
 /// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
 
 // TODO
-//   3. Implement bench
+//   3. Implement bench, fix-->CT
 //   4. Fix github actions
 //   5. Review main Doc; features: no_std, no alloc, minimal dependencies, CT
-//   6. Git push to CC, publish as 0.1.1
+//   6. Tag, Git push to CC, publish as 0.1.1
 //   7. Re-read spec
 #[cfg(test)]
 extern crate alloc;
@@ -131,7 +131,9 @@ macro_rules! functionality {
         #[cfg(test)]
         pub fn key_gen_test(seed: &[u8; 32]) -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(&seed, &seed, &mut ek.0, &mut dk.0);
+            ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(
+                &seed, &seed, &mut ek.0, &mut dk.0,
+            );
             (ek, dk)
         }
 
@@ -222,7 +224,7 @@ macro_rules! functionality {
                     DV,
                     DV_256,
                     J_LEN,
-                    CT_LEN
+                    CT_LEN,
                 >(&self.0, &ct.0)
             }
 

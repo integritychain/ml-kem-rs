@@ -3,7 +3,7 @@ use crate::helpers::{bit_rev_7, pow_mod_q};
 use crate::types::Z256;
 
 /// Algorithm 8 `NTT(f)` on page 22.
-/// Computes the NTT representation f_hat of the given polynomial f ∈ R_q.
+/// Computes the NTT representation `f_hat` of the given polynomial f ∈ `R_q`.
 #[must_use]
 #[allow(clippy::module_name_repetitions)]
 pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
@@ -45,7 +45,7 @@ pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
 
 
 /// Algorithm 9 `NTTinv(f)` on page 23.
-/// Computes the polynomial f ∈ R_q corresponding to the given NTT representation f_hat ∈ T_q.
+/// Computes the polynomial f ∈ `R_q` corresponding to the given NTT representation `f_hat` ∈ `T_q`.
 #[must_use]
 #[allow(clippy::module_name_repetitions)]
 pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {

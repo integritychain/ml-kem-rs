@@ -6,7 +6,7 @@ use crate::ntt::multiply_ntts;
 use crate::Q;
 use crate::types::Z256;
 
-/// Vector addition; See bottom of page 9, second row: z_hat = u_hat + v_hat
+/// Vector addition; See bottom of page 9, second row: `z_hat` = `u_hat` + `v_hat`
 #[must_use]
 pub(crate) fn vec_add<const K: usize>(
     vec_a: &[[Z256; 256]; K], vec_b: &[[Z256; 256]; K],
@@ -21,7 +21,7 @@ pub(crate) fn vec_add<const K: usize>(
 }
 
 
-/// Matrix by vector multiplication; See top of page 10, first row: w_hat = A_hat mul u_hat
+/// Matrix by vector multiplication; See top of page 10, first row: `w_hat` = `A_hat` mul `u_hat`
 #[must_use]
 pub(crate) fn mat_vec_mul<const K: usize>(
     a_hat: &[[[Z256; 256]; K]; K], u_hat: &[[Z256; 256]; K],
@@ -41,7 +41,7 @@ pub(crate) fn mat_vec_mul<const K: usize>(
 }
 
 
-/// Matrix transpose by vector multiplication; See top of page 10, second row: y_hat = A_hatT mul u_hat
+/// Matrix transpose by vector multiplication; See top of page 10, second row: `y_hat` = `A_hat^T` mul `u_hat`
 #[must_use]
 pub(crate) fn mat_t_vec_mul<const K: usize>(
     a_hat: &[[[Z256; 256]; K]; K], u_hat: &[[Z256; 256]; K],
@@ -60,7 +60,7 @@ pub(crate) fn mat_t_vec_mul<const K: usize>(
     y_hat
 }
 
-/// Vector dot product; See top of page 10, third row: z_dat = u_hatT mul v_hat
+/// Vector dot product; See top of page 10, third row: `z_hat` = `u_hat^T` mul `v_hat`
 #[must_use]
 pub(crate) fn dot_t_prod<const K: usize>(
     u_hat: &[[Z256; 256]; K], v_hat: &[[Z256; 256]; K],

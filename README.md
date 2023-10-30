@@ -6,12 +6,12 @@
 ![Apache2/MIT licensed][license-image]
 ![Rust Version][rustc-image]
 
-[mlKem] Module-Lattice-Based Key-Encapsulation Mechanism Standard written in pure Rust.
+[MlKem] Module-Lattice-Based Key-Encapsulation Mechanism Standard written in pure Rust.
 
-This library implements the FIPS 203 **draft** standard in pure Rust.
-All three security parameters sets are fully functional. The code
-does not require the standard library, e.g. `#[no_std]`, and has
-no heap allocations so will be suitable for WASM and embedded applications.
+This library implements the FIPS 203 **draft** standard in pure Rust with minimal and
+mainstream dependencies. All three security parameter sets are fully functional. The
+code does not require the standard library, e.g. `#[no_std]`, and has no heap
+allocations so will be suitable for WASM, embedded and bare-metal applications.
 Significant performance optimizations will be forthcoming.
 
 See: <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
@@ -109,4 +109,4 @@ dual licensed as above, without any additional terms or conditions.
 
 [IntegrityChain]: https://github.com/integritychain/
 
-[mlKem]: https://csrc.nist.gov/pubs/fips/203/ipd
+[MlKem]: https://csrc.nist.gov/pubs/fips/203/ipd

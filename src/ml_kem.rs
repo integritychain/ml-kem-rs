@@ -110,7 +110,7 @@ pub(crate) fn ml_kem_decaps<
     const DV: usize,
     const DV_256: usize,
     const J_LEN: usize,
-    const CT_LEN: usize
+    const CT_LEN: usize,
 >(
     dk: &[u8], ct: &[u8],
 ) -> SharedSecretKey {
