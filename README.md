@@ -99,7 +99,7 @@ dual licensed as above, without any additional terms or conditions.
 
 [docs-link]: https://docs.rs/ml-kem-rs/
 
-[build-image]: https://github.com/integritychain/ml-kem-rs/workflows/test/badge.svg?branch=master&event=push
+[build-image]: https://github.com/integritychain/ml-kem-rs/workflows/test/badge.svg
 
 [build-link]: https://github.com/integritychain/ml-kem-rs/actions?query=workflow%3Atest
 
