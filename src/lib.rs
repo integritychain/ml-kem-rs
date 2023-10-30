@@ -10,7 +10,7 @@
 // TODO
 //   3. Implement bench
 //   4. Fix github actions
-//   5. Review main Doc
+//   5. Review main Doc; features: no_std, no alloc, minimal dependencies, CT
 //   6. Git push to CC, publish as 0.1.1
 //   7. Re-read spec
 #[cfg(test)]

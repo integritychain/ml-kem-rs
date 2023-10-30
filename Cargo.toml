@@ -1,6 +1,6 @@
 [package]
 name = "ml-kem-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "FIPS 203 (draft): Module-Lattice-Based Key-Encapsulation Mechanism"
@@ -17,7 +17,6 @@ exclude = [".idea/*"]
 zeroize = { version = "1.6.0", features = ["zeroize_derive"] }
 sha3 = "0.10.8"
 rand = "0.8.5"
-getrandom = { version = "0.2", features = ["js"] }
 
 
 [features]

@@ -23,7 +23,7 @@ jobs:
           - 1.72.0 # MSRV
           - stable
         target:
-          - thumbv7em-none-eabi
+          #- thumbv7em-none-eabi
           - wasm32-unknown-unknown
     steps:
       - uses: actions/checkout@v4

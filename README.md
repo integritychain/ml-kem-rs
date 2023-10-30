@@ -8,30 +8,39 @@
 
 [mlKem] Module-Lattice-Based Key-Encapsulation Mechanism Standard written in pure Rust.
 
-Very simple to use, per the following example.
+This library implements the FIPS 203 **draft** standard in pure Rust.
+All three security parameters sets are fully functional. The code
+does not require the standard library, e.g. `#[no_std]`, and has
+no heap allocations so will be suitable for WASM and embedded applications.
+Significant performance optimizations will be forthcoming.
+
+See: <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
+
+The functionality is very simple to use, per the following example.
 
 ~~~rust
 // Use the desired target parameter set
 use ml_kem_rs::ml_kem_512; // Could also be ml_kem_1024 or ml_kem_768
 
-// Alice runs KeyGen, and then serializes ek for Bob (to bytes)
+// Alice runs KeyGen, and then serializes the encaps key ek for Bob (to bytes)
 let (alice_ek, alice_dk) = ml_kem_512::key_gen();
 let alice_ek_bytes = alice_ek.to_bytes();
 
-// Alice sends ek bytes to Bob
+// Alice sends the encaps key ek_bytes to Bob
 let bob_ek_bytes = alice_ek_bytes;
 
-// Bob deserializes ek bytes, runs Encaps, to get ssk and serializes ct for Alice (to bytes)
+// Bob deserializes the encaps ek_bytes, runs Encaps, to get the shared secret 
+// and ciphertext ct. He serializes the ciphertext ct for Alice (to bytes)
 let bob_ek = ml_kem_512::new_ek(bob_ek_bytes);
 let (bob_ssk_bytes, bob_ct) = bob_ek.encaps();
 let bob_ct_bytes = bob_ct.to_bytes();
 
-// Bob sends ct bytes to Alice
+// Bob sends the ciphertext ct_bytes to Alice
 let alice_ct_bytes = bob_ct_bytes;
 
-// Alice deserializes runs Decaps
+// Alice deserializes the ciphertext_ct and runs Decaps with decaps key
 let alice_ct = ml_kem_512::new_ct(alice_ct_bytes);
-let alice_ssk_bytes = alice_dk.decaps(&alice_ct);
+let alice_ssk_bytes = alice_dk.decaps( & alice_ct);
 
 // Alice and Bob will now have the same secret key
 assert_eq!(bob_ssk_bytes, alice_ssk_bytes);
@@ -88,9 +97,9 @@ dual licensed as above, without any additional terms or conditions.
 
 [docs-link]: https://docs.rs/ml-kem-rs/
 
-[build-image]: https://github.com/integritychain/ml-kem-rs/workflows/ml-kem-rs/badge.svg?branch=master&event=push
+[build-image]: https://github.com/integritychain/ml-kem-rs/workflows/integration/badge.svg?branch=master&event=push
 
-[build-link]: https://github.com/integritychain/ml-kem-rs/actions?query=workflow%3Aml-kem-rs
+[build-link]: https://github.com/integritychain/ml-kem-rs/actions?query=workflow%3Aintegration
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
 
