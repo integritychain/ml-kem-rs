@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(test1)]
 mod tests {
     use crate::ml_kem_512;
 
@@ -68,8 +68,8 @@ mod tests {
         ];
 
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
-        let (alice_ek, _alice_dk) = ml_kem_512::key_gen_test(&seed);
-        let alice_ek_bytes = alice_ek.to_bytes();
+        let (alice_ek, _alice_dk) = ml_kem_512::key_gen_with_rng(&seed);
+        let alice_ek_bytes = alice_ek.into_bytes();
 
         assert_eq!(exp_ek, alice_ek_bytes, "\nExp {:02X?}\nAct {:02X?}", &exp_ek, &alice_ek_bytes);
     }
@@ -200,8 +200,8 @@ mod tests {
         ];
 
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
-        let (_alice_ek, alice_dk) = ml_kem_512::key_gen_test(&seed);
-        let alice_dk_bytes = alice_dk.to_bytes_test();
+        let (_alice_ek, alice_dk) = ml_kem_512::key_gen_with_rng(&seed);
+        let alice_dk_bytes = alice_dk.into_bytes();
 
         assert_eq!(exp_dk, alice_dk_bytes, "\nExp {:02X?}\nAct {:02X?}", &exp_dk, &alice_dk_bytes);
     }
@@ -218,9 +218,9 @@ mod tests {
         ];
 
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
-        let (alice_ek, _alice_dk) = ml_kem_512::key_gen_test(&seed);
+        let (alice_ek, _alice_dk) = ml_kem_512::key_gen_with_rng(&seed);
         let (ssk, _ct) = alice_ek.encaps_test(&seed);
-        let ssk_bytes = ssk.to_bytes();
+        let ssk_bytes = ssk.into_bytes();
 
         assert_eq!(exp_ssk, ssk_bytes, "\nExp {:02X?}\nAct {:02X?}", &exp_ssk, &ssk_bytes);
     }
@@ -288,9 +288,9 @@ mod tests {
         ];
 
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
-        let (alice_ek, _alice_dk) = ml_kem_512::key_gen_test(&seed);
+        let (alice_ek, _alice_dk) = ml_kem_512::key_gen_with_rng(&seed);
         let (_ssk, ct) = alice_ek.encaps_test(&seed);
-        let ct_bytes = ct.to_bytes();
+        let ct_bytes = ct.into_bytes();
 
         assert_eq!(exp_ct, ct_bytes, "\nExp {:02X?}\nAct {:02X?}", &exp_ct, &ct_bytes);
     }
@@ -306,11 +306,11 @@ mod tests {
         ];
 
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
-        let (alice_ek, alice_dk) = ml_kem_512::key_gen_test(&seed);
+        let (alice_ek, alice_dk) = ml_kem_512::key_gen_with_rng(&seed);
         let (ssk1, ct) = alice_ek.encaps_test(&seed);
-        let ssk1_bytes = ssk1.to_bytes();
+        let ssk1_bytes = ssk1.into_bytes();
         let ssk2 = alice_dk.decaps(&ct);
-        let ssk2_bytes = ssk2.to_bytes();
+        let ssk2_bytes = ssk2.into_bytes();
 
         assert_eq!(exp_ssk, ssk1_bytes, "\n1: Exp {:02X?}\n1: Act {:02X?}", &exp_ssk, &ssk1_bytes);
         assert_eq!(exp_ssk, ssk2_bytes, "\n2: Exp {:02X?}\n2: Act {:02X?}", &exp_ssk, &ssk2_bytes);

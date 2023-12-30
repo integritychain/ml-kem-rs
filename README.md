@@ -22,11 +22,11 @@ The functionality is extremely simple to use, as demonstrated by the following e
 
 ~~~rust
 // Use the desired target parameter set.
-use ml_kem_rs::ml_kem_512; // Could also be ml_kem_768 or ml_kem_1024. 
+use fips203::ml_kem_512; // Could also be ml_kem_768 or ml_kem_1024. 
 
 // Alice runs `key_gen()` and then serializes the encaps key `ek` for Bob (to bytes).
 let (alice_ek, alice_dk) = ml_kem_512::key_gen();
-let alice_ek_bytes = alice_ek.to_bytes();
+let alice_ek_bytes = alice_ek.into_bytes();
 
 // Alice sends the encaps key `ek_bytes` to Bob.
 let bob_ek_bytes = alice_ek_bytes;
@@ -35,7 +35,7 @@ let bob_ek_bytes = alice_ek_bytes;
 // secret `ssk` and ciphertext `ct`. He serializes the ciphertext `ct` for Alice (to bytes).
 let bob_ek = ml_kem_512::new_ek(bob_ek_bytes);
 let (bob_ssk_bytes, bob_ct) = bob_ek.encaps();
-let bob_ct_bytes = bob_ct.to_bytes();
+let bob_ct_bytes = bob_ct.into_bytes();
 
 // Bob sends the ciphertext `ct_bytes` to Alice
 let alice_ct_bytes = bob_ct_bytes;

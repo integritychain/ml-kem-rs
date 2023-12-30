@@ -1,3 +1,5 @@
+use rand_core::CryptoRngCore;
+
 use crate::byte_fns::{byte_decode, byte_encode};
 use crate::helpers::{g, h, j};
 use crate::k_pke::k_pke_decrypt;
@@ -14,7 +16,7 @@ pub(crate) fn ml_kem_key_gen<
     const ETA1_64: usize,
     const ETA1_512: usize,
 >(
-    &random_z: &[u8; 32], &random_b: &[u8; 32], ek: &mut [u8], dk: &mut [u8],
+    rng: &mut impl CryptoRngCore, ek: &mut [u8], dk: &mut [u8],
 ) {
     // Output: Encapsulation key ek ∈ B^{384k+32}
     // Output: Decapsulation key dk ∈ B^{768k+96}
@@ -22,11 +24,12 @@ pub(crate) fn ml_kem_key_gen<
     debug_assert_eq!(dk.len(), 768 * K + 96);
 
     // 1: z ←− B32         ▷ z is 32 random bytes (see Section 3.3)
-    let z = random_z;
+    let mut z = [0u8; 32];
+    rng.fill_bytes(&mut z);
 
     // 2: (ek_{PKE}, dk_{PKE}) ← K-PKE.KeyGen()     ▷ run key generation for K-PKE
     let p1 = 384 * K;
-    k_pke_key_gen::<K, ETA1, ETA1_64, ETA1_512>(&random_b, ek, &mut dk[..p1]); // 3: ek ← ekPKE
+    k_pke_key_gen::<K, ETA1, ETA1_64, ETA1_512>(rng, ek, &mut dk[..p1]); // 3: ek ← ekPKE
 
     // 4: dk ← (dkPKE ∥ek∥H(ek)∥z)  (first concat element is done above alongside ek)
     let h_ek = h(ek);
@@ -55,7 +58,7 @@ pub(crate) fn ml_kem_encaps<
     const DV: usize,
     const DV_256: usize,
 >(
-    random_m: &[u8; 32], ek: &[u8], ct: &mut [u8],
+    rng: &mut impl CryptoRngCore, ek: &[u8], ct: &mut [u8],
 ) -> SharedSecretKey {
     // Validated input: encapsulation key ek ∈ B^{384k+32}
     // Output: shared key K ∈ B^{32}
@@ -73,18 +76,19 @@ pub(crate) fn ml_kem_encaps<
     }
 
     // 1: m ←− B32          ▷ m is 32 random bytes (see Section 3.3)
-    let m = random_m; //random::<[u8; 32]>();
+    let mut m = [0u8; 32];
+    rng.fill_bytes(&mut m); //random::<[u8; 32]>();
 
     // 2: (K, r) ← G(m∥H(ek))       ▷ derive shared secret key K and randomness r
     let h_ek = h(ek);
     let mut g_input = [0u8; 64];
-    g_input[0..32].copy_from_slice(m);
+    g_input[0..32].copy_from_slice(&m);
     g_input[32..64].copy_from_slice(&h_ek);
     let (k, r) = g(&g_input);
 
     // 3: 3: c ← K-PKE.Encrypt(ek, m, r)        ▷ encrypt m using K-PKE with randomness r
     k_pke_encrypt::<K, ETA1, ETA1_64, ETA1_512, ETA2, ETA2_64, ETA2_512, DU, DU_256, DV, DV_256>(
-        ek, m, &r, ct,
+        ek, &m, &r, ct,
     );
 
     // 4: return (K, c)  (note: ct is mutable input)

@@ -63,7 +63,7 @@ pub struct SharedSecretKey([u8; SSK_LEN]);
 impl SharedSecretKey {
     #[must_use]
     /// The `to_bytes` function deserializes a shared secret key into a byte array.
-    pub fn to_bytes(&self) -> [u8; SSK_LEN] { self.0 }
+    pub fn into_bytes(&self) -> [u8; SSK_LEN] { self.0 }
 }
 
 // Conservative (constant-time) paranoia...
@@ -90,7 +90,8 @@ macro_rules! functionality {
         const DV_256: usize = DV * 256;
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
-        use rand::random;
+        use rand_core::OsRng;
+        use rand_core::CryptoRngCore;
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
         /// Correctly sized encapsulation key specific to the target parameter set.
@@ -113,21 +114,19 @@ macro_rules! functionality {
         #[must_use]
         pub fn key_gen() -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            let random_z = random::<[u8; 32]>();
-            let random_d = random::<[u8; 32]>();
             ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(
-                &random_z, &random_d, &mut ek.0, &mut dk.0,
+                &mut OsRng, &mut ek.0, &mut dk.0,
             );
             (ek, dk)
         }
 
         /// Test only access to key generation seed
         #[must_use]
-        #[cfg(test)]
-        pub fn key_gen_test(seed: &[u8; 32]) -> (EncapsKey, DecapsKey) {
+        //#[cfg(test)]
+        pub fn key_gen_with_rng(rng: &mut impl CryptoRngCore) -> (EncapsKey, DecapsKey) {
             let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
             ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(
-                &seed, &seed, &mut ek.0, &mut dk.0,
+                rng, &mut ek.0, &mut dk.0,
             );
             (ek, dk)
         }
@@ -154,7 +153,6 @@ macro_rules! functionality {
             #[must_use]
             pub fn encaps(&self) -> (SharedSecretKey, CipherText) {
                 let mut ct = CipherText::default();
-                let random_m = random::<[u8; 32]>();
                 let ssk = ml_kem::ml_kem_encaps::<
                     K,
                     ETA1,
@@ -167,13 +165,13 @@ macro_rules! functionality {
                     DU_256,
                     DV,
                     DV_256,
-                >(&random_m, &self.0, &mut ct.0);
+                >(&mut OsRng, &self.0, &mut ct.0);
                 (ssk, ct)
             }
 
             /// Test only access to encapsulation seed
             #[must_use]
-            pub fn encaps_test(&self, seed: &[u8; 32]) -> (SharedSecretKey, CipherText) {
+            pub fn encaps_with_rng(&self, rng: &mut impl CryptoRngCore) -> (SharedSecretKey, CipherText) {
                 let mut ct = CipherText::default();
                 let ssk = ml_kem::ml_kem_encaps::<
                     K,
@@ -187,13 +185,13 @@ macro_rules! functionality {
                     DU_256,
                     DV,
                     DV_256,
-                >(&seed, &self.0, &mut ct.0);
+                >(rng, &self.0, &mut ct.0);
                 (ssk, ct)
             }
 
             /// The `to_bytes` function deserializes an encapsulation key into a byte array.
             #[must_use]
-            pub fn to_bytes(&self) -> [u8; EK_LEN] { self.0.clone() }
+            pub fn into_bytes(&self) -> [u8; EK_LEN] { self.0.clone() }
         }
 
 
@@ -225,8 +223,10 @@ macro_rules! functionality {
 
             /// The `to_bytes` function deserializes a cipher text into a byte array.
             #[must_use]
-            #[cfg(test)]
-            pub fn to_bytes_test(&self) -> [u8; DK_LEN] { self.0.clone() }
+            //#[cfg(test)]
+            pub fn into_bytes(&self) -> [u8; DK_LEN] { self.0.clone() }
+            /// asdf
+            pub fn new_dk(bytes: [u8; DK_LEN]) -> DecapsKey { DecapsKey(bytes) }
         }
 
 
@@ -235,7 +235,9 @@ macro_rules! functionality {
 
             /// The `to_bytes` function deserializes a cipher text into a byte array.
             #[must_use]
-            pub fn to_bytes(&self) -> [u8; CT_LEN] { self.0.clone() }
+            pub fn into_bytes(&self) -> [u8; CT_LEN] { self.0.clone() }
+            /// asdf
+            pub fn new_ct(bytes: [u8; CT_LEN]) -> CipherText { CipherText(bytes) }
         }
     };
 }

@@ -1,3 +1,5 @@
+use rand_core::CryptoRngCore;
+
 use crate::byte_fns::{byte_decode, byte_encode};
 use crate::helpers::{
     compress, decompress, dot_t_prod, g, mat_t_vec_mul, mat_vec_mul, prf, vec_add, xof,
@@ -16,7 +18,7 @@ pub fn k_pke_key_gen<
     const ETA1_64: usize,
     const ETA1_512: usize,
 >(
-    random_b: &[u8; 32], ek_pke: &mut [u8], dk_pke: &mut [u8],
+    rng: &mut impl CryptoRngCore, ek_pke: &mut [u8], dk_pke: &mut [u8],
 ) {
     // Output: encryption key ekPKE ∈ B^{384*k+32}
     // Output: decryption key dkPKE ∈ B^{384*k}
@@ -24,10 +26,11 @@ pub fn k_pke_key_gen<
     debug_assert_eq!(dk_pke.len(), 384 * K);
 
     // 1: d ←− B^{32}                   ▷ d is 32 random bytes (see Section 3.3)
-    let d = random_b; //random::<[u8; 32]>();
+    let mut d = [0u8; 32];
+    rng.fill_bytes(&mut d);
 
     // 2: 2: (ρ, σ) ← G(d)             ▷ expand to two pseudorandom 32-byte seeds
-    let (rho, sigma) = g(d);
+    let (rho, sigma) = g(&d);
 
     // 3: 3: N ← 0
     let mut n = 0;
@@ -42,7 +45,8 @@ pub fn k_pke_key_gen<
         for j in 0..K {
             //
             // 6: A_hat[i, j] ← SampleNTT(XOF(ρ, i, j))     ▷ each entry of Â uniform in NTT domain
-            a_hat[i][j] = sample_ntt(xof(&rho, u8::try_from(i).unwrap(), u8::try_from(j).unwrap()));
+            // See page 21 regarding transpose of i, j -? j, i in XOF() https://csrc.nist.gov/files/pubs/fips/203/ipd/docs/fips-203-initial-public-comments-2023.pdf
+            a_hat[i][j] = sample_ntt(xof(&rho, u8::try_from(j).unwrap(), u8::try_from(i).unwrap()));
             //
         } // 7: end for
     } // 8: end for
@@ -89,8 +93,10 @@ pub fn k_pke_key_gen<
         e_hat[i] = ntt(&e[i]);
     }
 
+
     // 19: t̂ ← Â ◦ ŝ + ê
-    let t_hat = vec_add(&mat_vec_mul(&a_hat, &s_hat), &e_hat);
+    let as_hat = mat_vec_mul(&a_hat, &s_hat);
+    let t_hat = vec_add(&as_hat, &e_hat);
 
     // 20: ek_{PKE} ← ByteEncode12(t̂)∥ρ        ▷ ByteEncode12 is run k times; include seed for Â
     for i in 0..K {
@@ -162,7 +168,8 @@ pub(crate) fn k_pke_encrypt<
         for j in 0..K {
             //
             // 6: Â[i, j] ← SampleNTT(XOF(ρ, i, j))
-            a_hat[i][j] = sample_ntt(xof(&rho, u8::try_from(i).unwrap(), u8::try_from(j).unwrap()));
+
+            a_hat[i][j] = sample_ntt(xof(&rho, u8::try_from(j).unwrap(), u8::try_from(i).unwrap()));
             //
         } // 7: end for
     } // 8: end for

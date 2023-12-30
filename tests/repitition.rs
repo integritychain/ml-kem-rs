@@ -1,11 +1,11 @@
-use ml_kem_rs::{ml_kem_1024, ml_kem_512, ml_kem_768};
+use fips203::{ml_kem_1024, ml_kem_512, ml_kem_768};
 
 #[test]
 fn test_expected_flow_512() {
     for _i in 0..100 {
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
         let (alice_ek, alice_dk) = ml_kem_512::key_gen();
-        let alice_ek_bytes = alice_ek.to_bytes();
+        let alice_ek_bytes = alice_ek.into_bytes();
 
         // Alice sends ek bytes to Bob
         let bob_ek_bytes = alice_ek_bytes;
@@ -13,7 +13,7 @@ fn test_expected_flow_512() {
         // Bob deserializes ek bytes, runs Encaps, to get ssk and serializes ct for Alice (to bytes)
         let bob_ek = ml_kem_512::new_ek(bob_ek_bytes);
         let (bob_ssk_bytes, bob_ct) = bob_ek.encaps();
-        let bob_ct_bytes = bob_ct.to_bytes();
+        let bob_ct_bytes = bob_ct.into_bytes();
 
         // Bob sends ct bytes to Alice
         let alice_ct_bytes = bob_ct_bytes;
@@ -32,7 +32,7 @@ fn test_expected_flow_768() {
     for _i in 0..100 {
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
         let (alice_ek, alice_dk) = ml_kem_768::key_gen();
-        let alice_ek_bytes = alice_ek.to_bytes();
+        let alice_ek_bytes = alice_ek.into_bytes();
 
         // Alice sends ek bytes to Bob
         let bob_ek_bytes = alice_ek_bytes;
@@ -40,7 +40,7 @@ fn test_expected_flow_768() {
         // Bob deserializes ek bytes, runs Encaps, to get ssk and serializes ct for Alice (to bytes)
         let bob_ek = ml_kem_768::new_ek(bob_ek_bytes);
         let (bob_ssk_bytes, bob_ct) = bob_ek.encaps();
-        let bob_ct_bytes = bob_ct.to_bytes();
+        let bob_ct_bytes = bob_ct.into_bytes();
 
         // Bob sends ct bytes to Alice
         let alice_ct_bytes = bob_ct_bytes;
@@ -59,7 +59,7 @@ fn test_expected_flow_1024() {
     for _i in 0..100 {
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
         let (alice_ek, alice_dk) = ml_kem_1024::key_gen();
-        let alice_ek_bytes = alice_ek.to_bytes();
+        let alice_ek_bytes = alice_ek.into_bytes();
 
         // Alice sends ek bytes to Bob
         let bob_ek_bytes = alice_ek_bytes;
@@ -67,7 +67,7 @@ fn test_expected_flow_1024() {
         // Bob deserializes ek bytes, runs Encaps, to get ssk and serializes ct for Alice (to bytes)
         let bob_ek = ml_kem_1024::new_ek(bob_ek_bytes);
         let (bob_ssk_bytes, bob_ct) = bob_ek.encaps();
-        let bob_ct_bytes = bob_ct.to_bytes();
+        let bob_ct_bytes = bob_ct.into_bytes();
 
         // Bob sends ct bytes to Alice
         let alice_ct_bytes = bob_ct_bytes;
