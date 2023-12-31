@@ -6,10 +6,6 @@
 
 /// Implements FIPS 203 draft Module-Lattice-based Key-Encapsulation Mechanism Standard.
 /// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
-
-#[cfg(test)]
-extern crate alloc;
-
 // Supports automatically clearing sensitive data on drop
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -46,8 +42,8 @@ mod ntt;
 mod sampling;
 mod types;
 
-#[cfg(test)]
-mod smoke_test;
+/// TKTK
+pub mod traits;
 
 // Relevant to all parameter sets
 const _N: u32 = 256;
@@ -57,14 +53,15 @@ const SSK_LEN: usize = 32;
 
 // Relevant to all parameter sets
 /// The (opaque) secret key that can be deserialized by each party.
-#[derive(Debug, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct SharedSecretKey([u8; SSK_LEN]);
 
 impl SharedSecretKey {
-    #[must_use]
     /// The `to_bytes` function deserializes a shared secret key into a byte array.
-    pub fn into_bytes(&self) -> [u8; SSK_LEN] { self.0 }
+    #[must_use]
+    pub fn into_bytes(self) -> [u8; SSK_LEN] { self.0 }
 }
+
 
 // Conservative (constant-time) paranoia...
 impl PartialEq for SharedSecretKey {
@@ -90,20 +87,20 @@ macro_rules! functionality {
         const DV_256: usize = DV * 256;
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
-        use rand_core::OsRng;
+        use crate::traits::{Decaps, Encaps, KeyGen, SerDes};
         use rand_core::CryptoRngCore;
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
         /// Correctly sized encapsulation key specific to the target parameter set.
-        #[derive(Zeroize, ZeroizeOnDrop)]
+        #[derive(Clone, Zeroize, ZeroizeOnDrop)]
         pub struct EncapsKey([u8; EK_LEN]);
 
         /// Correctly sized decapsulation key specific to the target parameter set.
-        #[derive(Zeroize, ZeroizeOnDrop)]
+        #[derive(Clone, Zeroize, ZeroizeOnDrop)]
         pub struct DecapsKey([u8; DK_LEN]);
 
         /// Correctly sized ciphertext specific to the target parameter set.
-        #[derive(Zeroize, ZeroizeOnDrop)]
+        #[derive(Clone, Zeroize, ZeroizeOnDrop)]
         pub struct CipherText([u8; CT_LEN]);
 
         /// Per FIPS 203, the key generation algorithm `ML-KEM.KeyGen` for ML-KEM (Algorithm 15)
@@ -111,48 +108,32 @@ macro_rules! functionality {
         /// decapsulation key. While the encapsulation key can be made public, the decapsulation key
         /// must remain private. This outputs of this function are opaque structs specific to a
         /// target parameter set.
-        #[must_use]
-        pub fn key_gen() -> (EncapsKey, DecapsKey) {
-            let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(
-                &mut OsRng, &mut ek.0, &mut dk.0,
-            );
-            (ek, dk)
+
+        pub struct KG();
+
+        impl KeyGen for KG {
+            type DecapsKey = DecapsKey;
+            type EncapsKey = EncapsKey;
+
+            /// TKTK
+            fn try_keygen_with_rng_vt(
+                rng: &mut impl CryptoRngCore,
+            ) -> Result<(EncapsKey, DecapsKey), &'static str> {
+                let (mut ek, mut dk) = ([0u8; EK_LEN], [0u8; DK_LEN]);
+                ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(rng, &mut ek, &mut dk); // handle internal results
+                Ok((EncapsKey(ek), DecapsKey(dk)))
+            }
         }
 
-        /// Test only access to key generation seed
-        #[must_use]
-        //#[cfg(test)]
-        pub fn key_gen_with_rng(rng: &mut impl CryptoRngCore) -> (EncapsKey, DecapsKey) {
-            let (mut ek, mut dk) = (EncapsKey::default(), DecapsKey::default());
-            ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(
-                rng, &mut ek.0, &mut dk.0,
-            );
-            (ek, dk)
-        }
+        impl Encaps for EncapsKey {
+            type CipherText = CipherText;
+            type SharedSecretKey = SharedSecretKey;
 
-        /// The `new_ek` function deserializes a byte array of the correct length into an
-        /// encapsulation key. The correct length of the input byte array is specific to a target
-        /// parameter set and the output is an opaque struct.
-        #[must_use]
-        pub fn new_ek(bytes: [u8; EK_LEN]) -> EncapsKey { EncapsKey(bytes) }
-
-        /// The `new_ct` function deserializes a byte array of the correct length into an opaque
-        /// cipher text value. The correct length of the input byte array is specific to a target
-        /// parameter set and the output is an opaque struct.
-        #[must_use]
-        pub fn new_ct(bytes: [u8; CT_LEN]) -> CipherText { CipherText(bytes) }
-
-        impl EncapsKey {
-            fn default() -> Self { EncapsKey([0u8; EK_LEN]) }
-
-            /// Per FIPS 203, the encapsulation algorithm `ML-KEM.Encaps` of ML-KEM (Algorithm 16)
-            /// accepts an encapsulation key as input, requires randomness, and outputs a ciphertext
-            /// and a shared key. The inputs and outputs to this function are opaque structs
-            /// specific to a target parameter set.
-            #[must_use]
-            pub fn encaps(&self) -> (SharedSecretKey, CipherText) {
-                let mut ct = CipherText::default();
+            /// TKTK
+            fn try_encaps_with_rng_vt(
+                &self, rng: &mut impl CryptoRngCore,
+            ) -> Result<(Self::SharedSecretKey, Self::CipherText), &'static str> {
+                let mut ct = [0u8; CT_LEN];
                 let ssk = ml_kem::ml_kem_encaps::<
                     K,
                     ETA1,
@@ -165,46 +146,18 @@ macro_rules! functionality {
                     DU_256,
                     DV,
                     DV_256,
-                >(&mut OsRng, &self.0, &mut ct.0);
-                (ssk, ct)
+                >(rng, &self.0, &mut ct);
+                Ok((ssk, CipherText(ct)))
             }
-
-            /// Test only access to encapsulation seed
-            #[must_use]
-            pub fn encaps_with_rng(&self, rng: &mut impl CryptoRngCore) -> (SharedSecretKey, CipherText) {
-                let mut ct = CipherText::default();
-                let ssk = ml_kem::ml_kem_encaps::<
-                    K,
-                    ETA1,
-                    ETA1_64,
-                    ETA1_512,
-                    ETA2,
-                    ETA2_64,
-                    ETA2_512,
-                    DU,
-                    DU_256,
-                    DV,
-                    DV_256,
-                >(rng, &self.0, &mut ct.0);
-                (ssk, ct)
-            }
-
-            /// The `to_bytes` function deserializes an encapsulation key into a byte array.
-            #[must_use]
-            pub fn into_bytes(&self) -> [u8; EK_LEN] { self.0.clone() }
         }
 
+        impl Decaps for DecapsKey {
+            type CipherText = CipherText;
+            type SharedSecretKey = SharedSecretKey;
 
-        impl DecapsKey {
-            fn default() -> Self { DecapsKey([0u8; DK_LEN]) }
-
-            /// Per FIPS 203, the decapsulation algorithm ML-KEM.Decaps of ML-KEM (Algorithm 16)
-            /// accepts a decapsulation key and a ML-KEM ciphertext as input, does not use any
-            /// randomness, and outputs a shared secret. The inputs and outputs to this function are
-            /// opaque structs specific to a target parameter set.
-            #[must_use]
-            pub fn decaps(&self, ct: &CipherText) -> SharedSecretKey {
-                ml_kem::ml_kem_decaps::<
+            ///TKTK
+            fn try_decaps_vt(&self, ct: &CipherText) -> Result<SharedSecretKey, &'static str> {
+                let ssk = ml_kem::ml_kem_decaps::<
                     K,
                     ETA1,
                     ETA1_64,
@@ -218,33 +171,51 @@ macro_rules! functionality {
                     DV_256,
                     J_LEN,
                     CT_LEN,
-                >(&self.0, &ct.0)
+                >(&self.0, &ct.0);
+                Ok(ssk)
             }
-
-            /// The `to_bytes` function deserializes a cipher text into a byte array.
-            #[must_use]
-            //#[cfg(test)]
-            pub fn into_bytes(&self) -> [u8; DK_LEN] { self.0.clone() }
-            /// asdf
-            pub fn new_dk(bytes: [u8; DK_LEN]) -> DecapsKey { DecapsKey(bytes) }
         }
 
 
-        impl CipherText {
-            fn default() -> Self { CipherText([0u8; CT_LEN]) }
+        impl SerDes for EncapsKey {
+            type ByteArray = [u8; EK_LEN];
 
-            /// The `to_bytes` function deserializes a cipher text into a byte array.
-            #[must_use]
-            pub fn into_bytes(&self) -> [u8; CT_LEN] { self.0.clone() }
-            /// asdf
-            pub fn new_ct(bytes: [u8; CT_LEN]) -> CipherText { CipherText(bytes) }
+            fn try_from_bytes(ek: Self::ByteArray) -> Result<Self, &'static str> {
+                //let _ = pk_decode::<K, PK_LEN>(&pk)?; //.map_err(|_e| "Public key deserialization failed");
+                Ok(EncapsKey(ek))
+            }
+
+            fn into_bytes(self) -> Self::ByteArray { self.0 }
+        }
+
+
+        impl SerDes for DecapsKey {
+            type ByteArray = [u8; DK_LEN];
+
+            fn try_from_bytes(dk: Self::ByteArray) -> Result<Self, &'static str> {
+                //let _ = pk_decode::<K, PK_LEN>(&pk)?; //.map_err(|_e| "Public key deserialization failed");
+                Ok(DecapsKey(dk))
+            }
+
+            fn into_bytes(self) -> Self::ByteArray { self.0 }
+        }
+
+        impl SerDes for CipherText {
+            type ByteArray = [u8; CT_LEN];
+
+            fn try_from_bytes(ct: Self::ByteArray) -> Result<Self, &'static str> {
+                //let _ = pk_decode::<K, PK_LEN>(&pk)?; //.map_err(|_e| "Public key deserialization failed");
+                Ok(CipherText(ct))
+            }
+
+            fn into_bytes(self) -> Self::ByteArray { self.0 }
         }
     };
 }
 
 
 ///  ML-KEM-512 is claimed to be in security category 1, see table 2 & 3 on page 33.
-#[cfg(feature = "ml_kem_512")]
+#[cfg(feature = "ml-kem-512")]
 pub mod ml_kem_512 {
     //!
     //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
@@ -268,12 +239,13 @@ pub mod ml_kem_512 {
     const DK_LEN: usize = 1632;
     const CT_LEN: usize = 768;
 
+
     functionality!();
 }
 
 
 /// ML-KEM-768 is claimed to be in security category 3, see table 2 & 3 on page 33.
-#[cfg(feature = "ml_kem_768")]
+#[cfg(feature = "ml-kem-768")]
 pub mod ml_kem_768 {
     //!
     //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
@@ -302,7 +274,7 @@ pub mod ml_kem_768 {
 
 
 /// ML-KEM-1024 is claimed to be in security category 5, see table 2 & 3 on page 33.
-#[cfg(feature = "ml_kem_1024")]
+#[cfg(feature = "ml-kem-1024")]
 pub mod ml_kem_1024 {
     //!
     //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>

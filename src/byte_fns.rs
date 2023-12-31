@@ -132,6 +132,8 @@ pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
 
 #[cfg(test)]
 mod tests {
+    extern crate alloc;
+
     use alloc::vec;
     use alloc::vec::Vec;
 

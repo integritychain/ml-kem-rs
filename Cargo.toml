@@ -20,11 +20,11 @@ rand = "0.8.5"
 
 
 [features]
-default = ["default-rng", "ml_kem_512", "ml_kem_768", "ml_kem_1024"]
+default = ["default-rng", "ml-kem-512", "ml-kem-768", "ml-kem-1024"]
 default-rng = ["rand_core/getrandom"]
-ml_kem_512 = []
-ml_kem_768 = []
-ml_kem_1024 = []
+ml-kem-512 = []
+ml-kem-768 = []
+ml-kem-1024 = []
 
 
 [dev-dependencies]
