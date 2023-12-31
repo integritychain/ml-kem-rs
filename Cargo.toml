@@ -40,7 +40,7 @@ harness = false
 
 
 [profile.bench]
-debug = 2
+debug = true
 debug-assertions = false
 incremental = false
 lto = true

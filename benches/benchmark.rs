@@ -34,16 +34,16 @@ Initial conditions
 cargo bench
 Intel® Core™ i7-7700K CPU @ 4.20GHz × 8
 
-ml_kem_512 KeyGen       time:   [81.377 µs 81.607 µs 82.058 µs]
-ml_kem_768 KeyGen       time:   [141.22 µs 141.24 µs 141.26 µs]
-ml_kem_1024 KeyGen      time:   [196.07 µs 196.11 µs 196.16 µs]
+ml_kem_512 KeyGen       time:   [64.996 µs 65.084 µs 65.246 µs]
+ml_kem_768 KeyGen       time:   [102.50 µs 102.54 µs 102.62 µs]
+ml_kem_1024 KeyGen      time:   [148.28 µs 148.33 µs 148.38 µs]
 
-ml_kem_512 Encaps       time:   [103.26 µs 103.40 µs 103.60 µs]
-ml_kem_768 Encaps       time:   [175.28 µs 175.30 µs 175.32 µs]
-ml_kem_1024 Encaps      time:   [241.54 µs 241.58 µs 241.64 µs]
+ml_kem_512 Encaps       time:   [77.391 µs 77.424 µs 77.489 µs]
+ml_kem_768 Encaps       time:   [117.76 µs 117.83 µs 117.90 µs]
+ml_kem_1024 Encaps      time:   [167.77 µs 167.79 µs 167.82 µs]
 
-ml_kem_512 Decaps       time:   [110.86 µs 110.88 µs 110.90 µs]
-ml_kem_768 Decaps       time:   [188.13 µs 188.19 µs 188.28 µs]
-ml_kem_1024 Decaps      time:   [262.80 µs 263.47 µs 264.59 µs]
+ml_kem_512 Decaps       time:   [75.627 µs 75.671 µs 75.745 µs]
+ml_kem_768 Decaps       time:   [115.20 µs 115.24 µs 115.27 µs]
+ml_kem_1024 Decaps      time:   [164.48 µs 164.56 µs 164.67 µs]
 
  */

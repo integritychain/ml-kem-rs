@@ -1,5 +1,4 @@
-use crate::{helpers, Q, ZETA};
-use crate::helpers::{bit_rev_7, pow_mod_q};
+use crate::{Q, ZETA};
 use crate::types::Z256;
 
 /// Algorithm 8 `NTT(f)` on page 22.
@@ -23,7 +22,8 @@ pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
         for start in (0..256).step_by(2 * len) {
             //
             // 5: zeta ← ζ^{BitRev7 (k)} mod q
-            let zeta = pow_mod_q(ZETA, bit_rev_7(k));
+            let zeta = ZETA_TABLE[k << 1];
+
 
             // 6: k ← k+1
             k += 1;
@@ -70,7 +70,7 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
         for start in (0..256).step_by(2 * len) {
             //
             // 5: zeta ← ζ^{BitRev7(k)} mod q
-            let zeta = helpers::pow_mod_q(ZETA, helpers::bit_rev_7(k));
+            let zeta = ZETA_TABLE[k << 1];
 
             // 6: k ← k − 1
             k -= 1;
@@ -118,8 +118,7 @@ pub fn multiply_ntts(f_hat: &[Z256; 256], g_hat: &[Z256; 256]) -> [Z256; 256] {
             f_hat[2 * i + 1],
             g_hat[2 * i],
             g_hat[2 * i + 1],
-            Z256(helpers::pow_mod_q(ZETA, 2 * helpers::bit_rev_7(u8::try_from(i).unwrap()) + 1)
-                as u16),
+            Z256(ZETA_TABLE[i ^ 0x80] as u16),
         );
         h_hat[2 * i] = h_hat_2i;
         h_hat[2 * i + 1] = h_hat_2ip1;
@@ -148,3 +147,39 @@ pub fn base_case_multiply(a0: Z256, a1: Z256, b0: Z256, b1: Z256, gamma: Z256) -
     // 3: return c0 , c1
     (c0, c1)
 }
+
+
+/// HAC Algorithm 14.76 Right-to-left binary exponentiation mod Q.
+#[must_use]
+const fn pow_mod_q(g: u32, e: u8) -> u32 {
+    let g = g as u64;
+    let mut result = 1;
+    let mut s = g;
+    let mut e = e;
+    while e != 0 {
+        if e & 1 != 0 {
+            result = (result * s).rem_euclid(Q as u64);
+        };
+        e >>= 1;
+        if e != 0 {
+            s = (s * s).rem_euclid(Q as u64);
+        };
+    }
+    //reduce_q64(result)
+    result as u32
+}
+
+#[allow(dead_code)]
+const fn gen_zeta_table() -> [u32; 256] {
+    let mut result = [0u32; 256];
+    let mut i = 0;
+    while i < 256u16 {
+        result[i as usize] = pow_mod_q(ZETA, (i as u8).reverse_bits());
+        i += 1;
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub(crate) static ZETA_TABLE: [u32; 256] = gen_zeta_table();
+

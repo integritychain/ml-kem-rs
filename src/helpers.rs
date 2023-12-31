@@ -136,38 +136,40 @@ pub(crate) fn j(bytes: &[u8]) -> [u8; 32] {
 }
 
 
-/// BitRev7(i) from page 21 line 839-840.
-/// Returns the integer represented by bit-reversing the unsigned 7-bit value that
-/// corresponds to the input integer i ∈ {0, . . . , 127}.  (horrible perf)
-#[must_use]
-pub(crate) fn bit_rev_7(a: u8) -> u8 {
-    ((a >> 6) & 1)
-        | ((a >> 4) & 2)
-        | ((a >> 2) & 4)
-        | (a & 8)
-        | ((a << 2) & 16)
-        | ((a << 4) & 32)
-        | ((a << 6) & 64)
-}
+// REMOVED DUE TO ZETA_TABLE IN ntt.rs
+// /// BitRev7(i) from page 21 line 839-840.
+// /// Returns the integer represented by bit-reversing the unsigned 7-bit value that
+// /// corresponds to the input integer i ∈ {0, . . . , 127}.  (horrible perf)
+// #[must_use]
+// pub(crate) const fn bit_rev_7(a: u8) -> u8 {
+//     ((a >> 6) & 1)
+//         | ((a >> 4) & 2)
+//         | ((a >> 2) & 4)
+//         | (a & 8)
+//         | ((a << 2) & 16)
+//         | ((a << 4) & 32)
+//         | ((a << 6) & 64)
+// }
 
-
-/// HAC Algorithm 14.76 Right-to-left binary exponentiation mod Q.
-#[must_use]
-pub(crate) fn pow_mod_q(g: u32, e: u8) -> u32 {
-    let mut result = 1;
-    let mut s = g;
-    let mut e = e;
-    while e != 0 {
-        if e & 1 != 0 {
-            result = (result * s) % Q;
-        };
-        e >>= 1;
-        if e != 0 {
-            s = (s * s) % Q;
-        };
-    }
-    result
-}
+// REMOVED DUE TO ZETA_TABLE IN ntt.rs
+// /// HAC Algorithm 14.76 Right-to-left binary exponentiation mod Q.
+// #[must_use]
+// #[allow(dead_code)]
+// pub(crate) fn pow_mod_q(g: u32, e: u8) -> u32 {
+//     let mut result = 1;
+//     let mut s = g;
+//     let mut e = e;
+//     while e != 0 {
+//         if e & 1 != 0 {
+//             result = (result * s) % Q;
+//         };
+//         e >>= 1;
+//         if e != 0 {
+//             s = (s * s) % Q;
+//         };
+//     }
+//     result
+// }
 
 
 /// Round to nearest
