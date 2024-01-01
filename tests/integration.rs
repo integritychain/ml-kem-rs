@@ -1,11 +1,14 @@
+use rand_chacha::rand_core::SeedableRng;
+
 use fips203::{ml_kem_1024, ml_kem_512, ml_kem_768};
 use fips203::traits::{Decaps, Encaps, KeyGen, SerDes};
 
 #[test]
 fn test_expected_flow_512() {
+    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123);
     for _i in 0..100 {
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
-        let (alice_ek, alice_dk) = ml_kem_512::KG::try_keygen_vt().unwrap();
+        let (alice_ek, alice_dk) = ml_kem_512::KG::try_keygen_with_rng_vt(&mut rng).unwrap();
         let alice_ek_bytes = alice_ek.into_bytes();
 
         // Alice sends ek bytes to Bob
@@ -13,7 +16,7 @@ fn test_expected_flow_512() {
 
         // Bob deserializes ek bytes, runs Encaps, to get ssk and serializes ct for Alice (to bytes)
         let bob_ek = ml_kem_512::EncapsKey::try_from_bytes(bob_ek_bytes).unwrap();
-        let (bob_ssk_bytes, bob_ct) = bob_ek.try_encaps_vt().unwrap();
+        let (bob_ssk_bytes, bob_ct) = bob_ek.try_encaps_with_rng_vt(&mut rng).unwrap();
         let bob_ct_bytes = bob_ct.into_bytes();
 
         // Bob sends ct bytes to Alice
@@ -30,9 +33,10 @@ fn test_expected_flow_512() {
 
 #[test]
 fn test_expected_flow_768() {
+    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(456);
     for _i in 0..100 {
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
-        let (alice_ek, alice_dk) = ml_kem_768::KG::try_keygen_vt().unwrap();
+        let (alice_ek, alice_dk) = ml_kem_768::KG::try_keygen_with_rng_vt(&mut rng).unwrap();
         let alice_ek_bytes = alice_ek.into_bytes();
 
         // Alice sends ek bytes to Bob
@@ -40,7 +44,7 @@ fn test_expected_flow_768() {
 
         // Bob deserializes ek bytes, runs Encaps, to get ssk and serializes ct for Alice (to bytes)
         let bob_ek = ml_kem_768::EncapsKey::try_from_bytes(bob_ek_bytes).unwrap();
-        let (bob_ssk_bytes, bob_ct) = bob_ek.try_encaps_vt().unwrap();
+        let (bob_ssk_bytes, bob_ct) = bob_ek.try_encaps_with_rng_vt(&mut rng).unwrap();
         let bob_ct_bytes = bob_ct.into_bytes();
 
         // Bob sends ct bytes to Alice
@@ -57,9 +61,10 @@ fn test_expected_flow_768() {
 
 #[test]
 fn test_expected_flow_1024() {
+    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(789);
     for _i in 0..100 {
         // Alice runs KeyGen, and serializes ek for Bob (to bytes)
-        let (alice_ek, alice_dk) = ml_kem_1024::KG::try_keygen_vt().unwrap();
+        let (alice_ek, alice_dk) = ml_kem_1024::KG::try_keygen_with_rng_vt(&mut rng).unwrap();
         let alice_ek_bytes = alice_ek.into_bytes();
 
         // Alice sends ek bytes to Bob
@@ -67,7 +72,7 @@ fn test_expected_flow_1024() {
 
         // Bob deserializes ek bytes, runs Encaps, to get ssk and serializes ct for Alice (to bytes)
         let bob_ek = ml_kem_1024::EncapsKey::try_from_bytes(bob_ek_bytes).unwrap();
-        let (bob_ssk_bytes, bob_ct) = bob_ek.try_encaps_vt().unwrap();
+        let (bob_ssk_bytes, bob_ct) = bob_ek.try_encaps_with_rng_vt(&mut rng).unwrap();
         let bob_ct_bytes = bob_ct.into_bytes();
 
         // Bob sends ct bytes to Alice
