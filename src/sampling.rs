@@ -1,6 +1,7 @@
 use sha3::digest::XofReader;
 
 use crate::byte_fns::bytes_to_bits;
+use crate::helpers::ensure;
 use crate::Q;
 use crate::types::Z256;
 
@@ -33,7 +34,7 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
         if d1 < Q {
             //
             // 7: a_hat[j] ← d1         ▷ a_hat ∈ Z256
-            array_a_hat[j] = Z256(d1 as u16); //.set_u16(d1);
+            array_a_hat[j] = Z256(u16::try_from(d1).unwrap());
 
             // 8: j ← j+1
             j += 1;
@@ -44,7 +45,7 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
         if (d2 < Q) & (j < 256) {
             //
             // 11: a_hat[j] ← d2
-            array_a_hat[j] = Z256(d2 as u16); //.set_u16(d2);
+            array_a_hat[j] = Z256(u16::try_from(d2).unwrap()); //.set_u16(d2);
 
             // 12: j ← j+1
             j += 1;
@@ -60,18 +61,17 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
 
 /// Algorithm 7 `SamplePolyCBDη(B)` on page 20.
 /// If the input is a stream of uniformly random bytes, outputs a sample from the distribution Dη (Rq ).
-#[must_use]
-pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(byte_array_b: &[u8]) -> [Z256; 256] {
+pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(byte_array_b: &[u8]) -> Result<[Z256; 256], &'static str> {
     // Input: byte array B ∈ B^{64η}
     // Output: array f ∈ Z^{256}_q
-    debug_assert_eq!(ETA * 512, ETA_512);
-    debug_assert_eq!(byte_array_b.len(), ETA * 64);
+    ensure!(ETA * 512 == ETA_512, "TKTK");
+    ensure!(byte_array_b.len() == ETA * 64, "TKTK");
 
     let mut array_f: [Z256; 256] = [Z256(0); 256];
     let mut bit_array = [0u8; ETA_512];
 
     // 1: b ← BytesToBits(B)
-    bytes_to_bits(byte_array_b, &mut bit_array);
+    bytes_to_bits(byte_array_b, &mut bit_array)?;
 
     // 2: for (i ← 0; i < 256; i ++)
     for i in 0..256 {
@@ -83,10 +83,10 @@ pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(byte_array_b: &[u
         let y = (0..ETA).fold(0, |acc: u32, j| acc + u32::from(bit_array[2 * i * ETA + ETA + j]));
 
         // 5: f [i] ← x − y mod q
-        array_f[i] = Z256(x as u16).sub(Z256(y as u16));
+        array_f[i] = Z256(u16::try_from(x).unwrap()).sub(Z256(u16::try_from(y).unwrap()));
 
         //
     } // 6: end for
 
-    array_f // 7: return f
+    Ok(array_f) // 7: return f
 }

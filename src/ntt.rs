@@ -22,7 +22,7 @@ pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
         for start in (0..256).step_by(2 * len) {
             //
             // 5: zeta ← ζ^{BitRev7 (k)} mod q
-            let zeta = Z256(ZETA_TABLE[k << 1] as u16);
+            let zeta = Z256(ZETA_TABLE[k << 1]);
 
 
             // 6: k ← k+1
@@ -70,7 +70,7 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
         for start in (0..256).step_by(2 * len) {
             //
             // 5: zeta ← ζ^{BitRev7(k)} mod q
-            let zeta = Z256(ZETA_TABLE[k << 1] as u16);
+            let zeta = Z256(ZETA_TABLE[k << 1]);
 
             // 6: k ← k − 1
             k -= 1;
@@ -118,7 +118,7 @@ pub fn multiply_ntts(f_hat: &[Z256; 256], g_hat: &[Z256; 256]) -> [Z256; 256] {
             f_hat[2 * i + 1],
             g_hat[2 * i],
             g_hat[2 * i + 1],
-            Z256(ZETA_TABLE[i ^ 0x80] as u16),
+            Z256(ZETA_TABLE[i ^ 0x80]),
         );
         h_hat[2 * i] = h_hat_2i;
         h_hat[2 * i + 1] = h_hat_2ip1;
@@ -148,7 +148,8 @@ pub fn base_case_multiply(a0: Z256, a1: Z256, b0: Z256, b1: Z256, gamma: Z256) -
 
 /// HAC Algorithm 14.76 Right-to-left binary exponentiation mod Q.
 #[must_use]
-const fn pow_mod_q(g: u32, e: u8) -> u32 {
+#[allow(clippy::cast_possible_truncation)]
+const fn pow_mod_q(g: u32, e: u8) -> u16 {
     let g = g as u64;
     let mut result = 1;
     let mut s = g;
@@ -163,12 +164,13 @@ const fn pow_mod_q(g: u32, e: u8) -> u32 {
         };
     }
     //reduce_q64(result)
-    result as u32
+    result as u16
 }
 
 #[allow(dead_code)]
-const fn gen_zeta_table() -> [u32; 256] {
-    let mut result = [0u32; 256];
+#[allow(clippy::cast_possible_truncation)]
+const fn gen_zeta_table() -> [u16; 256] {
+    let mut result = [0u16; 256];
     let mut i = 0;
     while i < 256u16 {
         result[i as usize] = pow_mod_q(ZETA, (i as u8).reverse_bits());
@@ -178,5 +180,5 @@ const fn gen_zeta_table() -> [u32; 256] {
 }
 
 #[allow(dead_code)]
-pub(crate) static ZETA_TABLE: [u32; 256] = gen_zeta_table();
+pub(crate) static ZETA_TABLE: [u16; 256] = gen_zeta_table();
 

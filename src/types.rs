@@ -7,19 +7,18 @@ use crate::Q;
 #[derive(Clone, Copy)]
 pub struct Z256(pub u16);
 
+#[allow(clippy::inline_always)]
 impl Z256 {
 
     pub fn get_u16(self) -> u16 { self.0 }
 
-    // pub fn set_u16(&mut self, a: u32) {
-    //     //debug_assert!(a < Q); //u32::from(u16::MAX));
-    //     self.0 = u16::try_from(a % Q).unwrap(); // TODO: Revisit
-    // }
+    #[allow(clippy::cast_possible_truncation)]
+    const Q16: u16 = Q as u16;
 
     #[inline(always)]
     pub fn add(self, other: Self) -> Self {
         let sum = self.0.wrapping_add(other.0);
-        let (trial, borrow) = sum.overflowing_sub(Q as u16);
+        let (trial, borrow) = sum.overflowing_sub(Self::Q16);
         let result = if borrow { sum } else { trial }; // Not quite CT
         Self(result)
     }
@@ -28,13 +27,13 @@ impl Z256 {
     #[inline(always)]
     pub fn sub(self, other: Self) -> Self {
         let (diff, borrow) = self.0.overflowing_sub(other.0);
-        let trial = diff.wrapping_add(Q as u16);
+        let trial = diff.wrapping_add(Self::Q16);
         let result = if borrow { trial } else { diff }; // Not quite CT
-        Self(result as u16)
+        Self(result)
     }
 
 
-    const M: u64 = 2u64.pow(32) / (Q as u64);
+    const M: u64 = 2u64.pow(32) / (Self::Q64);
     const Q64: u64 = Q as u64;
     #[inline(always)]
     pub fn mul(self, other: Self) -> Self {
@@ -44,6 +43,6 @@ impl Z256 {
         let rem = prod - quot * Self::Q64;
         let (diff, borrow) = rem.overflowing_sub(Self::Q64);
         let result = if borrow { rem } else { diff }; // Not quite CT
-        Self(result as u16)
+        Self(u16::try_from(result).unwrap())
     }
 }

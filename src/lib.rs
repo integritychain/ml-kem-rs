@@ -120,7 +120,7 @@ macro_rules! functionality {
                 rng: &mut impl CryptoRngCore,
             ) -> Result<(EncapsKey, DecapsKey), &'static str> {
                 let (mut ek, mut dk) = ([0u8; EK_LEN], [0u8; DK_LEN]);
-                ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(rng, &mut ek, &mut dk); // handle internal results
+                ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(rng, &mut ek, &mut dk)?; // handle internal results
                 Ok((EncapsKey(ek), DecapsKey(dk)))
             }
         }
@@ -146,7 +146,7 @@ macro_rules! functionality {
                     DU_256,
                     DV,
                     DV_256,
-                >(rng, &self.0, &mut ct);
+                >(rng, &self.0, &mut ct)?;
                 Ok((ssk, CipherText(ct)))
             }
         }
@@ -172,7 +172,7 @@ macro_rules! functionality {
                     J_LEN,
                     CT_LEN,
                 >(&self.0, &ct.0);
-                Ok(ssk)
+                ssk
             }
         }
 

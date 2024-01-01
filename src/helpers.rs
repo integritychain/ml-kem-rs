@@ -6,6 +6,17 @@ use crate::ntt::multiply_ntts;
 use crate::Q;
 use crate::types::Z256;
 
+/// If the condition is not met, return an error message. Borrowed from the `anyhow` crate.
+macro_rules! ensure {
+    ($cond:expr, $msg:literal $(,)?) => {
+        if !$cond {
+            return Err($msg);
+        }
+    };
+}
+
+pub(crate) use ensure; // make available throughout crate
+
 /// Vector addition; See bottom of page 9, second row: `z_hat` = `u_hat` + `v_hat`
 #[must_use]
 pub(crate) fn vec_add<const K: usize>(
@@ -14,7 +25,7 @@ pub(crate) fn vec_add<const K: usize>(
     let mut result = [[Z256(0); 256]; K];
     for i in 0..vec_a.len() {
         for j in 0..vec_a[i].len() {
-            result[i][j] = vec_a[i][j].add(vec_b[i][j]); //.set_u16(vec_a[i][j].get_u32() + vec_b[i][j].get_u32());
+            result[i][j] = vec_a[i][j].add(vec_b[i][j]);
         }
     }
     result
@@ -33,7 +44,7 @@ pub(crate) fn mat_vec_mul<const K: usize>(
         for j in 0..K {
             let tmp = multiply_ntts(&a_hat[i][j], &u_hat[j]);
             for k in 0..256 {
-                w_hat[i][k] = w_hat[i][k].add(tmp[k]);  //.set_u16(w_hat[i][k].get_u32() + tmp[k].get_u32());
+                w_hat[i][k] = w_hat[i][k].add(tmp[k]);
             }
         }
     }
