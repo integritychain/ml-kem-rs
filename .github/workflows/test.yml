@@ -14,38 +14,33 @@ env:
   RUSTFLAGS: "-Dwarnings"
   RUSTDOCFLAGS: "-Dwarnings"
 
-jobs:
-  #build:
-  #  runs-on: ubuntu-latest
-  #  strategy:
-  #    matrix:
-  #      rust:
-  #        - 1.72.0 # MSRV
-  #        - stable
-  #      target:
-  #        #- thumbv7em-none-eabi
-  #        - wasm32-unknown-unknown
-  #  steps:
-  #    - uses: actions/checkout@v4
-  #    - uses: dtolnay/rust-toolchain@master
-  #      with:
-  #        toolchain: ${{ matrix.rust }}
-  #        targets: ${{ matrix.target }}
-  #    - run: cargo build --target ${{ matrix.target }} --release
 
-  #benches:
-  #  runs-on: ubuntu-latest
-  #  strategy:
-  #    matrix:
-  #      rust:
-  #        - 1.72.0 # MSRV
-  #        - stable
-  #  steps:
-  #    - uses: actions/checkout@v4
-  #    - uses: dtolnay/rust-toolchain@master
-  #      with:
-  #        toolchain: ${{ matrix.rust }}
-  #    - run: cargo build --all-features --benches
+jobs:
+
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - 1.72.0 # MSRV
+          - stable
+        target:
+          - thumbv7em-none-eabi
+          - wasm32-unknown-unknown
+          - s390x-unknown-linux-gnu
+          - powerpc64-unknown-linux-gnu
+          - riscv64gc-unknown-none-elf
+          - x86_64-pc-windows-gnu
+          - x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          targets: ${{ matrix.target }}
+      - run: cargo build --target ${{ matrix.target }} --release --no-default-features --features "ml-kem-512 ml-kem-768 ml-kem-1024"
+
 
   test:
     runs-on: ubuntu-latest
@@ -76,38 +71,36 @@ jobs:
       - run: cargo check --target ${{ matrix.target }} --all-features
       - run: cargo test --release --target ${{ matrix.target }}
 
-  #cross:
-  #  strategy:
-  #    matrix:
-  #      include:
-  #        # ARM32
-  #        - target: armv7-unknown-linux-gnueabihf
-  #          rust: 1.72.0 # MSRV (cross)
-  #        - target: armv7-unknown-linux-gnueabihf
-  #          rust: stable
 
-  #        # ARM64
-  #        - target: aarch64-unknown-linux-gnu
-  #          rust: 1.72.0 # MSRV (cross)
-  #        - target: aarch64-unknown-linux-gnu
-  #          rust: stable
-
-  #        # PPC32
-  #        - target: powerpc-unknown-linux-gnu
-  #          rust: 1.72.0 # MSRV (cross)
-  #        - target: powerpc-unknown-linux-gnu
-  #          rust: stable
-
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #    - uses: actions/checkout@v4
-  #    - run: ${{ matrix.deps }}
-  #    - uses: dtolnay/rust-toolchain@master
-  #      with:
-  #        toolchain: ${{ matrix.rust }}
-  #        targets: ${{ matrix.target }}
-  #    - uses: RustCrypto/actions/cross-install@master
-  #    - run: cross test --release --target ${{ matrix.target }} --all-features
+  cross:
+    strategy:
+      matrix:
+        include:
+          # ARM32
+          - target: armv7-unknown-linux-gnueabihf
+            rust: 1.72.0 # MSRV (cross)
+          - target: armv7-unknown-linux-gnueabihf
+            rust: stable
+          # ARM64
+          - target: aarch64-unknown-linux-gnu
+            rust: 1.72.0 # MSRV (cross)
+          - target: aarch64-unknown-linux-gnu
+            rust: stable
+          # PPC32
+          - target: powerpc-unknown-linux-gnu
+            rust: 1.72.0 # MSRV (cross)
+          - target: powerpc-unknown-linux-gnu
+            rust: stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ${{ matrix.deps }}
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          targets: ${{ matrix.target }}
+      - uses: RustCrypto/actions/cross-install@master
+      - run: cross test --release --target ${{ matrix.target }} --no-default-features --features "ml-kem-512 ml-kem-768 ml-kem-1024"
 
   doc:
     runs-on: ubuntu-latest

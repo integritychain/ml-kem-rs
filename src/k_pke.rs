@@ -5,7 +5,6 @@ use crate::helpers::{
     compress, decompress, dot_t_prod, g, mat_t_vec_mul, mat_vec_mul, prf, vec_add, xof,
 };
 use crate::ntt::{ntt, ntt_inv};
-use crate::Q;
 use crate::sampling::{sample_ntt, sample_poly_cbd};
 use crate::types::Z256;
 
@@ -297,7 +296,7 @@ pub(crate) fn k_pke_decrypt<
     for _i in 0..K {
         let yy = ntt_inv(&st_ntt_u);
         for i in 0..256 {
-            w[i].set_u16((Q + v[i].get_u32() - yy[i].get_u32()) % Q);
+            w[i] = v[i].sub(yy[i]);
         }
     }
 

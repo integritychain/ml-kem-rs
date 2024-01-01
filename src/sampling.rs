@@ -24,7 +24,7 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
         byte_stream_b.read(&mut bbb); // Draw 3 bytes
 
         // 4: d1 ← B[i] + 256 · (B[i + 1] mod 16)
-        let d1 = u32::from(bbb[0]) + 256 * (u32::from(bbb[1]) % 16);
+        let d1 = u32::from(bbb[0]) + 256 * (u32::from(bbb[1]) & 0x0F);
 
         // 5: d2 ← ⌊B[i + 1]/16⌋ + 16 · B[i + 2]
         let d2 = u32::from(bbb[1]) / 16 + 16 * u32::from(bbb[2]);
@@ -33,7 +33,7 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
         if d1 < Q {
             //
             // 7: a_hat[j] ← d1         ▷ a_hat ∈ Z256
-            array_a_hat[j].set_u16(d1);
+            array_a_hat[j] = Z256(d1 as u16); //.set_u16(d1);
 
             // 8: j ← j+1
             j += 1;
@@ -44,7 +44,7 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
         if (d2 < Q) & (j < 256) {
             //
             // 11: a_hat[j] ← d2
-            array_a_hat[j].set_u16(d2);
+            array_a_hat[j] = Z256(d2 as u16); //.set_u16(d2);
 
             // 12: j ← j+1
             j += 1;
@@ -83,7 +83,8 @@ pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(byte_array_b: &[u
         let y = (0..ETA).fold(0, |acc: u32, j| acc + u32::from(bit_array[2 * i * ETA + ETA + j]));
 
         // 5: f [i] ← x − y mod q
-        array_f[i].set_u16((Q + x - y) % Q);
+        array_f[i] = Z256(x as u16).sub(Z256(y as u16));
+
         //
     } // 6: end for
 

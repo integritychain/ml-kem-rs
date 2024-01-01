@@ -14,7 +14,7 @@ pub(crate) fn vec_add<const K: usize>(
     let mut result = [[Z256(0); 256]; K];
     for i in 0..vec_a.len() {
         for j in 0..vec_a[i].len() {
-            result[i][j].set_u16(vec_a[i][j].get_u32() + vec_b[i][j].get_u32());
+            result[i][j] = vec_a[i][j].add(vec_b[i][j]); //.set_u16(vec_a[i][j].get_u32() + vec_b[i][j].get_u32());
         }
     }
     result
@@ -33,7 +33,7 @@ pub(crate) fn mat_vec_mul<const K: usize>(
         for j in 0..K {
             let tmp = multiply_ntts(&a_hat[i][j], &u_hat[j]);
             for k in 0..256 {
-                w_hat[i][k].set_u16(w_hat[i][k].get_u32() + tmp[k].get_u32());
+                w_hat[i][k] = w_hat[i][k].add(tmp[k]);  //.set_u16(w_hat[i][k].get_u32() + tmp[k].get_u32());
             }
         }
     }
@@ -53,7 +53,7 @@ pub(crate) fn mat_t_vec_mul<const K: usize>(
         for j in 0..K {
             let tmp = multiply_ntts(&a_hat[j][i], &u_hat[j]);
             for k in 0..256 {
-                y_hat[i][k].set_u16(y_hat[i][k].get_u32() + tmp[k].get_u32());
+                y_hat[i][k] = y_hat[i][k].add(tmp[k]);  //.set_u16(y_hat[i][k].get_u32() + tmp[k].get_u32());
             }
         }
     }
@@ -70,7 +70,7 @@ pub(crate) fn dot_t_prod<const K: usize>(
     for j in 0..K {
         let tmp = multiply_ntts(&u_hat[j], &v_hat[j]);
         for k in 0..256 {
-            result[k].set_u16(result[k].get_u32() + tmp[k].get_u32());
+            result[k] = result[k].add(tmp[k]);  //.set_u16(result[k].get_u32() + tmp[k].get_u32());
         }
     }
     result
@@ -136,43 +136,10 @@ pub(crate) fn j(bytes: &[u8]) -> [u8; 32] {
 }
 
 
-// REMOVED DUE TO ZETA_TABLE IN ntt.rs
-// /// BitRev7(i) from page 21 line 839-840.
-// /// Returns the integer represented by bit-reversing the unsigned 7-bit value that
-// /// corresponds to the input integer i ∈ {0, . . . , 127}.  (horrible perf)
-// #[must_use]
-// pub(crate) const fn bit_rev_7(a: u8) -> u8 {
-//     ((a >> 6) & 1)
-//         | ((a >> 4) & 2)
-//         | ((a >> 2) & 4)
-//         | (a & 8)
-//         | ((a << 2) & 16)
-//         | ((a << 4) & 32)
-//         | ((a << 6) & 64)
-// }
-
-// REMOVED DUE TO ZETA_TABLE IN ntt.rs
-// /// HAC Algorithm 14.76 Right-to-left binary exponentiation mod Q.
-// #[must_use]
-// #[allow(dead_code)]
-// pub(crate) fn pow_mod_q(g: u32, e: u8) -> u32 {
-//     let mut result = 1;
-//     let mut s = g;
-//     let mut e = e;
-//     while e != 0 {
-//         if e & 1 != 0 {
-//             result = (result * s) % Q;
-//         };
-//         e >>= 1;
-//         if e != 0 {
-//             s = (s * s) % Q;
-//         };
-//     }
-//     result
-// }
+// BitRev7(i) from page 21 line 839-840 -- REMOVED DUE TO ZETA_TABLE IN ntt.rs
 
 
-/// Round to nearest
+/// Round to nearest  TODO: refine/optimize
 fn nearest(numerator: u32, denominator: u32) -> u16 {
     let remainder = numerator % denominator;
     let quotient = u16::try_from(numerator / denominator).unwrap();

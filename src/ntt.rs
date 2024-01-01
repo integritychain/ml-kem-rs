@@ -22,7 +22,7 @@ pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
         for start in (0..256).step_by(2 * len) {
             //
             // 5: zeta ← ζ^{BitRev7 (k)} mod q
-            let zeta = ZETA_TABLE[k << 1];
+            let zeta = Z256(ZETA_TABLE[k << 1] as u16);
 
 
             // 6: k ← k+1
@@ -32,13 +32,13 @@ pub fn ntt(array_f: &[Z256; 256]) -> [Z256; 256] {
             for j in start..(start + len) {
                 //
                 // 8: t ← zeta · f_hat[ j + len]           ▷ steps 8-10 done modulo q
-                let t = zeta * f_hat[j + len].get_u32() % Q;
+                let t = f_hat[j + len].mul(zeta);
 
                 // 9: f_hat[ j + len] ← f_hat [ j] − t
-                f_hat[j + len].set_u16((Q + f_hat[j].get_u32() - t) % Q);
+                f_hat[j + len] = f_hat[j].sub(t);
 
                 // 10: f_hat[ j] ← f_hat[ j] + t
-                f_hat[j].set_u16((f_hat[j].get_u32() + t) % Q);
+                f_hat[j] = f_hat[j].add(t);
                 //
             } // 11: end for
         } // 12: end for
@@ -70,7 +70,7 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
         for start in (0..256).step_by(2 * len) {
             //
             // 5: zeta ← ζ^{BitRev7(k)} mod q
-            let zeta = ZETA_TABLE[k << 1];
+            let zeta = Z256(ZETA_TABLE[k << 1] as u16);
 
             // 6: k ← k − 1
             k -= 1;
@@ -82,10 +82,10 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
                 let t = f[j];
 
                 // 9: f [ j] ← t + f [ j + len]         ▷ steps 9-10 done modulo q
-                f[j].set_u16((t.get_u32() + f[j + len].get_u32()) % Q);
+                f[j] = t.add(f[j + len]);
 
                 // 10: f [ j + len] ← zeta · ( f [ j + len] − t)
-                f[j + len].set_u16((zeta * (Q + f[j + len].get_u32() - t.get_u32())) % Q);
+                f[j + len] = zeta.mul(f[j + len].sub(t));
                 //
             } // 11: end for
         } // 12: end for
@@ -93,7 +93,7 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
 
     // 14: f ← f · 3303 mod q                   ▷ multiply every entry by 3303 ≡ 128^{−1} mod q
     f.iter_mut()
-        .for_each(|item| item.set_u16(item.get_u32() * 3303 % Q));
+        .for_each(|item| *item = item.mul(Z256(3303)));
 
     // 15: return f
     f
@@ -136,13 +136,10 @@ pub fn base_case_multiply(a0: Z256, a1: Z256, b0: Z256, b1: Z256, gamma: Z256) -
     // Input: γ ∈ Z_q                               ▷ the modulus is X^2 − γ
     // Output: c0 , c1 ∈ Z_q                        ▷ the coeffcients of the product of the two polynomials
     // 1: c0 ← a0 · b0 + a1 · b1 · γ                ▷ steps 1-2 done modulo q
-    let c0 = Z256(
-        ((a0.get_u32() * b0.get_u32() + (a1.get_u32() * b1.get_u32() % Q) * gamma.get_u32()) % Q)
-            as u16,
-    );
+    let c0 = a0.mul(b0).add(a1.mul(b1).mul(gamma));
 
     // 2: 2: c1 ← a0 · b1 + a1 · b0
-    let c1 = Z256(((a0.get_u32() * b1.get_u32() + a1.get_u32() * b0.get_u32()) % Q) as u16);
+    let c1 = a0.mul(b1).add(a1.mul(b0));
 
     // 3: return c0 , c1
     (c0, c1)

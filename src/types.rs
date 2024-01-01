@@ -8,21 +8,42 @@ use crate::Q;
 pub struct Z256(pub u16);
 
 impl Z256 {
-    pub fn get_u32(self) -> u32 { u32::from(self.0) }
 
     pub fn get_u16(self) -> u16 { self.0 }
 
-    pub fn set_u16(&mut self, a: u32) {
-        //debug_assert!(a < Q); //u32::from(u16::MAX));
-        self.0 = u16::try_from(a % Q).unwrap(); // TODO: Revisit
+    // pub fn set_u16(&mut self, a: u32) {
+    //     //debug_assert!(a < Q); //u32::from(u16::MAX));
+    //     self.0 = u16::try_from(a % Q).unwrap(); // TODO: Revisit
+    // }
+
+    #[inline(always)]
+    pub fn add(self, other: Self) -> Self {
+        let sum = self.0.wrapping_add(other.0);
+        let (trial, borrow) = sum.overflowing_sub(Q as u16);
+        let result = if borrow { sum } else { trial }; // Not quite CT
+        Self(result)
     }
 
-    #[allow(dead_code)] // Barrett mult/reduce; Will be incorporated shortly...
+
+    #[inline(always)]
+    pub fn sub(self, other: Self) -> Self {
+        let (diff, borrow) = self.0.overflowing_sub(other.0);
+        let trial = diff.wrapping_add(Q as u16);
+        let result = if borrow { trial } else { diff }; // Not quite CT
+        Self(result as u16)
+    }
+
+
+    const M: u64 = 2u64.pow(32) / (Q as u64);
+    const Q64: u64 = Q as u64;
+    #[inline(always)]
     pub fn mul(self, other: Self) -> Self {
         let prod = u64::from(self.0) * u64::from(other.0);
-        let div = prod * (2u64.pow(24) / (u64::from(Q)));
-        let (diff, borrow) = div.overflowing_sub(u64::from(Q));
-        let result = if borrow { div } else { diff }; // TODO: CT MUX
-        Self(u16::try_from(result).unwrap()) // TODO: Revisit
+        let quot = prod * Self::M;
+        let quot = quot >> (32);
+        let rem = prod - quot * Self::Q64;
+        let (diff, borrow) = rem.overflowing_sub(Self::Q64);
+        let result = if borrow { rem } else { diff }; // Not quite CT
+        Self(result as u16)
     }
 }
