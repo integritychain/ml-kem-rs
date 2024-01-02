@@ -6,6 +6,7 @@
 
 /// Implements FIPS 203 draft Module-Lattice-based Key-Encapsulation Mechanism Standard.
 /// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
+
 // Supports automatically clearing sensitive data on drop
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -300,3 +301,26 @@ pub mod ml_kem_1024 {
 
     functionality!();
 }
+
+/*
+Notes
+
+Flamegraph
+https://github.com/flamegraph-rs/flamegraph
+  echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid
+  cargo flamegraph --test integration
+
+Fuzzing
+https://rust-fuzz.github.io/book/cargo-fuzz.html
+  cd fuzz
+  rustup default nightly
+  head -c 3200 </dev/urandom > corpus/seed1
+  cargo fuzz run fuzz_all -j 4
+
+Dudect
+https://docs.rs/dudect-bencher/latest/dudect_bencher/
+  cd dudect
+  cargo run --release -- --continuous encaps
+  cargo run --release -- --continuous decaps
+
+*/

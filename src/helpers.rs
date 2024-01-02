@@ -64,7 +64,7 @@ pub(crate) fn mat_t_vec_mul<const K: usize>(
         for j in 0..K {
             let tmp = multiply_ntts(&a_hat[j][i], &u_hat[j]);
             for k in 0..256 {
-                y_hat[i][k] = y_hat[i][k].add(tmp[k]);  //.set_u16(y_hat[i][k].get_u32() + tmp[k].get_u32());
+                y_hat[i][k] = y_hat[i][k].add(tmp[k]); //.set_u16(y_hat[i][k].get_u32() + tmp[k].get_u32());
             }
         }
     }
@@ -81,7 +81,7 @@ pub(crate) fn dot_t_prod<const K: usize>(
     for j in 0..K {
         let tmp = multiply_ntts(&u_hat[j], &v_hat[j]);
         for k in 0..256 {
-            result[k] = result[k].add(tmp[k]);  //.set_u16(result[k].get_u32() + tmp[k].get_u32());
+            result[k] = result[k].add(tmp[k]); //.set_u16(result[k].get_u32() + tmp[k].get_u32());
         }
     }
     result

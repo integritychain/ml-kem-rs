@@ -61,7 +61,9 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
 
 /// Algorithm 7 `SamplePolyCBDη(B)` on page 20.
 /// If the input is a stream of uniformly random bytes, outputs a sample from the distribution Dη (Rq ).
-pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(byte_array_b: &[u8]) -> Result<[Z256; 256], &'static str> {
+pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(
+    byte_array_b: &[u8],
+) -> Result<[Z256; 256], &'static str> {
     // Input: byte array B ∈ B^{64η}
     // Output: array f ∈ Z^{256}_q
     ensure!(ETA * 512 == ETA_512, "TKTK");

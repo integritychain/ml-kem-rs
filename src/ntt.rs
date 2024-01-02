@@ -92,8 +92,7 @@ pub fn ntt_inv(f_hat: &[Z256; 256]) -> [Z256; 256] {
     } // 13: end for
 
     // 14: f ← f · 3303 mod q                   ▷ multiply every entry by 3303 ≡ 128^{−1} mod q
-    f.iter_mut()
-        .for_each(|item| *item = item.mul(Z256(3303)));
+    f.iter_mut().for_each(|item| *item = item.mul(Z256(3303)));
 
     // 15: return f
     f
@@ -181,4 +180,3 @@ const fn gen_zeta_table() -> [u16; 256] {
 
 #[allow(dead_code)]
 pub(crate) static ZETA_TABLE: [u16; 256] = gen_zeta_table();
-

@@ -112,7 +112,7 @@ pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
 ) -> Result<(), &'static str> {
     ensure!((1 <= D) & (D <= 12), "TKTK");
     ensure!(D * 256 == D_256, "TKTK");
-    ensure!(bytes_b.len() == 32 * D ,"TKTK");
+    ensure!(bytes_b.len() == 32 * D, "TKTK");
     ensure!(integers_f.len() == 256, "TKTKT");
 
     let m_mod = if D < 12 {

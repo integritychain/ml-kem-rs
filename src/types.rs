@@ -9,11 +9,12 @@ pub struct Z256(pub u16);
 
 #[allow(clippy::inline_always)]
 impl Z256 {
-
-    pub fn get_u16(self) -> u16 { self.0 }
-
+    const M: u64 = 2u64.pow(32) / (Self::Q64);
     #[allow(clippy::cast_possible_truncation)]
     const Q16: u16 = Q as u16;
+    const Q64: u64 = Q as u64;
+
+    pub fn get_u16(self) -> u16 { self.0 }
 
     #[inline(always)]
     pub fn add(self, other: Self) -> Self {
@@ -23,7 +24,6 @@ impl Z256 {
         Self(result)
     }
 
-
     #[inline(always)]
     pub fn sub(self, other: Self) -> Self {
         let (diff, borrow) = self.0.overflowing_sub(other.0);
@@ -32,9 +32,6 @@ impl Z256 {
         Self(result)
     }
 
-
-    const M: u64 = 2u64.pow(32) / (Self::Q64);
-    const Q64: u64 = Q as u64;
     #[inline(always)]
     pub fn mul(self, other: Self) -> Self {
         let prod = u64::from(self.0) * u64::from(other.0);

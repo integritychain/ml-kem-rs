@@ -1,7 +1,9 @@
 use rand_core::CryptoRngCore;
 
 use crate::byte_fns::{byte_decode, byte_encode};
-use crate::helpers::{compress, decompress, dot_t_prod, ensure, g, mat_t_vec_mul, mat_vec_mul, prf, vec_add, xof};
+use crate::helpers::{
+    compress, decompress, dot_t_prod, ensure, g, mat_t_vec_mul, mat_vec_mul, prf, vec_add, xof,
+};
 use crate::ntt::{ntt, ntt_inv};
 use crate::sampling::{sample_ntt, sample_poly_cbd};
 use crate::types::Z256;
