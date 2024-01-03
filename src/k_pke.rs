@@ -22,12 +22,13 @@ pub fn k_pke_key_gen<
 >(
     rng: &mut impl CryptoRngCore, ek_pke: &mut [u8], dk_pke: &mut [u8],
 ) -> Result<(), &'static str> {
-    ensure!(ek_pke.len() == 384 * K + 32, "TKTK");
-    ensure!(dk_pke.len() == 384 * K, "TKTK");
+    ensure!(ek_pke.len() == 384 * K + 32, "Alg12: ek_pke not 384 * K + 32");
+    ensure!(dk_pke.len() == 384 * K, "Alg12: dk_pke not 384 * K");
 
     // 1: d ←− B^{32}                   ▷ d is 32 random bytes (see Section 3.3)
     let mut d = [0u8; 32];
-    rng.fill_bytes(&mut d);
+    rng.try_fill_bytes(&mut d)
+        .map_err(|_| "Alg12: random number generator failed")?;
 
     // 2: 2: (ρ, σ) ← G(d)             ▷ expand to two pseudorandom 32-byte seeds
     let (rho, sigma) = g(&d);
@@ -136,15 +137,15 @@ pub(crate) fn k_pke_encrypt<
     // Input: message m ∈ B^{32}
     // Input: encryption randomness r ∈ B^{32}
     // Output: ciphertext c ∈ B^{32(du k+dv )}
-    ensure!(ek.len() == 384 * K + 32, "TKTK");
-    ensure!(m.len() == 32, "TKTK");
-    ensure!(randomness.len() == 32, "TKTK");
-    ensure!(ETA1 * 64 == ETA1_64, "TKTK");
-    ensure!(ETA1 * 512 == ETA1_512, "TKTK");
-    ensure!(ETA2 * 64 == ETA2_64, "TKTK");
-    ensure!(ETA2 * 512 == ETA2_512, "TKTK");
-    ensure!(DU * 256 == DU_256, "TKTK");
-    ensure!(DV * 256 == DV_256, "TKTK");
+    ensure!(ek.len() == 384 * K + 32, "Alg13: ek len not 384 * K + 32");
+    ensure!(m.len() == 32, "Alg13: m len not 32");
+    ensure!(randomness.len() == 32, "Alg13: randomness len not 32");
+    ensure!(ETA1 * 64 == ETA1_64, "Alg13: const probs");
+    ensure!(ETA1 * 512 == ETA1_512, "Alg13: const probs");
+    ensure!(ETA2 * 64 == ETA2_64, "Alg13: const probs");
+    ensure!(ETA2 * 512 == ETA2_512, "Alg13: const probs");
+    ensure!(DU * 256 == DU_256, "Alg13: const probs");
+    ensure!(DV * 256 == DV_256, "Alg13: const probs");
 
     // 1: N ← 0
     let mut n = 0;
@@ -259,10 +260,10 @@ pub(crate) fn k_pke_decrypt<
     // Input: decryption key dk_{PKE} ∈ B^{384*k}
     // Input: ciphertext c ∈ B^{32(du*k+dv)}
     // Output: message m ∈ B^{32}
-    ensure!(dk.len() == 384 * K, "TKTK");
-    ensure!(ct.len() == 32 * (DU * K + DV), "TKTK");
-    ensure!(DU * 256 == DU_256, "TKTK");
-    ensure!(DV * 256 == DV_256, "TKTK");
+    ensure!(dk.len() == 384 * K, "Alg14: dk len not 384 * K");
+    ensure!(ct.len() == 32 * (DU * K + DV), "Alg14: 32 * (DU * K + DV)");
+    ensure!(DU * 256 == DU_256, "Alg14: const probs");
+    ensure!(DV * 256 == DV_256, "Alg14: const probs");
 
     // 1: c1 ← c[0 : 32du k]
     let c1 = &ct[0..32 * DU * K];

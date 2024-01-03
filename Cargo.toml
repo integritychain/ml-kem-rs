@@ -1,3 +1,4 @@
+workspace = { members = ["ct_cm4"] }
 [package]
 name = "fips203"
 version = "0.1.0"

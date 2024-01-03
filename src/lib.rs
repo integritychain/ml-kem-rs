@@ -6,7 +6,7 @@
 
 /// Implements FIPS 203 draft Module-Lattice-based Key-Encapsulation Mechanism Standard.
 /// See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
-
+//
 // Supports automatically clearing sensitive data on drop
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -33,7 +33,8 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 // Compress and Decompress on page 18                       --> helpers.rs
 //
 // The three parameter sets are modules in this file with injected macro code
-// that connects them into the functionality in ml_kem.rs
+// that connects them into the functionality in ml_kem.rs. Some of the strange
+// coding style is driven by clippy pedantic.
 
 mod byte_fns;
 mod helpers;
@@ -79,7 +80,7 @@ impl PartialEq for SharedSecretKey {
 // This common functionality is injected into each parameter set module
 macro_rules! functionality {
     () => {
-        // TODO: Implement a 'global scratch' struct rather than the weird lower-level stuff here
+        // TODO: optimizing out the byte_fns will greatly simplify/remove these constants
         const ETA1_64: usize = ETA1 * 64; // Currently, Rust does not allow expressions involving
         const ETA1_512: usize = ETA1 * 512; // constants in type expressions such as [u8, ETA1 * 64].
         const ETA2_64: usize = ETA2 * 64; // So this is handled manually...what a pain
@@ -88,7 +89,10 @@ macro_rules! functionality {
         const DV_256: usize = DV * 256;
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
+        use crate::SharedSecretKey;
         use crate::traits::{Decaps, Encaps, KeyGen, SerDes};
+        use crate::ml_kem::{ml_kem_decaps, ml_kem_encaps, ml_kem_key_gen};
+
         use rand_core::CryptoRngCore;
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -121,7 +125,7 @@ macro_rules! functionality {
                 rng: &mut impl CryptoRngCore,
             ) -> Result<(EncapsKey, DecapsKey), &'static str> {
                 let (mut ek, mut dk) = ([0u8; EK_LEN], [0u8; DK_LEN]);
-                ml_kem::ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(rng, &mut ek, &mut dk)?; // handle internal results
+                ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(rng, &mut ek, &mut dk)?;
                 Ok((EncapsKey(ek), DecapsKey(dk)))
             }
         }
@@ -135,7 +139,7 @@ macro_rules! functionality {
                 &self, rng: &mut impl CryptoRngCore,
             ) -> Result<(Self::SharedSecretKey, Self::CipherText), &'static str> {
                 let mut ct = [0u8; CT_LEN];
-                let ssk = ml_kem::ml_kem_encaps::<
+                let ssk = ml_kem_encaps::<
                     K,
                     ETA1,
                     ETA1_64,
@@ -158,7 +162,7 @@ macro_rules! functionality {
 
             ///TKTK
             fn try_decaps_vt(&self, ct: &CipherText) -> Result<SharedSecretKey, &'static str> {
-                let ssk = ml_kem::ml_kem_decaps::<
+                let ssk = ml_kem_decaps::<
                     K,
                     ETA1,
                     ETA1_64,
@@ -182,7 +186,7 @@ macro_rules! functionality {
             type ByteArray = [u8; EK_LEN];
 
             fn try_from_bytes(ek: Self::ByteArray) -> Result<Self, &'static str> {
-                //let _ = pk_decode::<K, PK_LEN>(&pk)?; //.map_err(|_e| "Public key deserialization failed");
+                // TODO: validation here
                 Ok(EncapsKey(ek))
             }
 
@@ -194,7 +198,7 @@ macro_rules! functionality {
             type ByteArray = [u8; DK_LEN];
 
             fn try_from_bytes(dk: Self::ByteArray) -> Result<Self, &'static str> {
-                //let _ = pk_decode::<K, PK_LEN>(&pk)?; //.map_err(|_e| "Public key deserialization failed");
+                // TODO: validation here
                 Ok(DecapsKey(dk))
             }
 
@@ -205,7 +209,7 @@ macro_rules! functionality {
             type ByteArray = [u8; CT_LEN];
 
             fn try_from_bytes(ct: Self::ByteArray) -> Result<Self, &'static str> {
-                //let _ = pk_decode::<K, PK_LEN>(&pk)?; //.map_err(|_e| "Public key deserialization failed");
+                // TODO: validation here
                 Ok(CipherText(ct))
             }
 
@@ -228,8 +232,6 @@ pub mod ml_kem_512 {
     //! 4. The remote party deserializes the cipertext via `cipherText.to_bytes()` and sends to the originator.
     //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
     //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
-
-    use crate::{ml_kem, SharedSecretKey};
 
     const K: usize = 2;
     const ETA1: usize = 3;
@@ -259,8 +261,6 @@ pub mod ml_kem_768 {
     //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
     //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
 
-    use crate::{ml_kem, SharedSecretKey};
-
     const K: usize = 3;
     const ETA1: usize = 2;
     const ETA2: usize = 2;
@@ -287,8 +287,6 @@ pub mod ml_kem_1024 {
     //! 4. The remote party deserializes the cipertext via `cipherText.to_bytes()` and sends to the originator.
     //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
     //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
-
-    use crate::{ml_kem, SharedSecretKey};
 
     const K: usize = 4;
     const ETA1: usize = 2;

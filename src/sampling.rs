@@ -66,8 +66,8 @@ pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(
 ) -> Result<[Z256; 256], &'static str> {
     // Input: byte array B ∈ B^{64η}
     // Output: array f ∈ Z^{256}_q
-    ensure!(ETA * 512 == ETA_512, "TKTK");
-    ensure!(byte_array_b.len() == ETA * 64, "TKTK");
+    ensure!(ETA * 512 == ETA_512, "Alg7: const probs");
+    ensure!(byte_array_b.len() == ETA * 64, "Alg7: bytes len not ETA * 64");
 
     let mut array_f: [Z256; 256] = [Z256(0); 256];
     let mut bit_array = [0u8; ETA_512];

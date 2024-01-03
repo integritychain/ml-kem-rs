@@ -8,9 +8,9 @@ use crate::types::Z256;
 /// Input: bit array b ∈ {0,1}^{8·ℓ} <br>
 /// Output: byte array B ∈ B^ℓ
 pub(crate) fn bits_to_bytes(bits: &[u8], bytes: &mut [u8]) -> Result<(), &'static str> {
-    ensure!(bits.len() % 8 == 0, "TKTK");
+    ensure!(bits.len() % 8 == 0, "Alg2: bit length not multiple of 8");
     // bit_array is multiple of 8
-    ensure!(bits.len() == 8 * bytes.len(), "TKTK"); // bit_array length is 8ℓ
+    ensure!(bits.len() == 8 * bytes.len(), "Alg2: bit length not 8 * byte length"); // bit_array length is 8ℓ
 
     // 1: B ← (0, . . . , 0)  (returned mutable data struct is provided by the caller)
     bytes.iter_mut().for_each(|b| *b = 0);
@@ -19,7 +19,7 @@ pub(crate) fn bits_to_bytes(bits: &[u8], bytes: &mut [u8]) -> Result<(), &'stati
     for i in 0..bits.len() {
         //
         // 3: B [⌊i/8⌋] ← B [⌊i/8⌋] + b[i] · 2^{i mod 8}
-        bytes[i / 8] += bits[i] * 2u8.pow(u32::try_from(i).map_err(|_| "too many bits")? % 8);
+        bytes[i / 8] += bits[i] * 2u8.pow(u32::try_from(i).map_err(|_| "impossible 1")? % 8);
         //
     } // 4: end for
 
@@ -33,9 +33,9 @@ pub(crate) fn bits_to_bytes(bits: &[u8], bytes: &mut [u8]) -> Result<(), &'stati
 /// Input: byte array B ∈ B^ℓ <br>
 /// Output: bit array b ∈ {0,1}^{8·ℓ}
 pub(crate) fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) -> Result<(), &'static str> {
-    ensure!(bits.len() % 8 == 0, "TKTK");
+    ensure!(bits.len() % 8 == 0, "Alg3: bit length not multiple of 8");
     // bit_array is multiple of 8
-    ensure!(bytes.len() * 8 == bits.len(), "TKTK"); // bit_array length is 8ℓ
+    ensure!(bytes.len() * 8 == bits.len(), "Alg3: bit length not 8 * byte length"); // bit_array length is 8ℓ
 
     // 1: for (i ← 0; i < ℓ; i ++)
     for i in 0..bytes.len() {
@@ -65,15 +65,15 @@ pub(crate) fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) -> Result<(), &'stati
 pub(crate) fn byte_encode<const D: usize, const D_256: usize>(
     integers_f: &[Z256; 256], bytes_b: &mut [u8],
 ) -> Result<(), &'static str> {
-    ensure!((1 <= D) & (D <= 12), "TKTK");
-    ensure!(D * 256 == D_256, "TKTK");
-    ensure!(integers_f.len() == 256, "TKTK");
-    ensure!(bytes_b.len() == 32 * D, "TKTK");
+    ensure!((1 <= D) & (D <= 12), "Alg4: const probs 1");
+    ensure!(D * 256 == D_256, "Alg4: const probs 2");
+    ensure!(integers_f.len() == 256, "Alg4: integers length not 256");
+    ensure!(bytes_b.len() == 32 * D, "Alg4: byte length not 32 * D");
 
     let m_mod = if D < 12 {
-        2_u16.pow(u32::try_from(D).map_err(|_| "impossible")?)
+        2_u16.pow(u32::try_from(D).map_err(|_| "impossible 2")?)
     } else {
-        u16::try_from(Q).map_err(|_| "impossible")?
+        u16::try_from(Q).map_err(|_| "impossible 3")?
     };
     let mut bit_array = [0u8; D_256];
 
@@ -110,15 +110,15 @@ pub(crate) fn byte_encode<const D: usize, const D_256: usize>(
 pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
     bytes_b: &[u8], integers_f: &mut [Z256; 256],
 ) -> Result<(), &'static str> {
-    ensure!((1 <= D) & (D <= 12), "TKTK");
-    ensure!(D * 256 == D_256, "TKTK");
-    ensure!(bytes_b.len() == 32 * D, "TKTK");
-    ensure!(integers_f.len() == 256, "TKTKT");
+    ensure!((1 <= D) & (D <= 12), "Alg5: Const probs");
+    ensure!(D * 256 == D_256, "Alg5: const probs");
+    ensure!(bytes_b.len() == 32 * D, "Alg5: bytes length not 32 * D");
+    ensure!(integers_f.len() == 256, "Alg5: integer length not 256");
 
     let m_mod = if D < 12 {
-        2_u16.pow(u32::try_from(D).map_err(|_| "impossible")?)
+        2_u16.pow(u32::try_from(D).map_err(|_| "impossible 4")?)
     } else {
-        u16::try_from(Q).map_err(|_| "impossible")?
+        u16::try_from(Q).map_err(|_| "impossible 5")?
     };
     let mut bit_array = [0u8; D_256];
 
@@ -133,7 +133,7 @@ pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
             Z256(
                 (acc.get_u16()
                     + u16::from(bit_array[i * D + j]) * 2_u16.pow(u32::try_from(j).unwrap()))
-                    % m_mod,
+                    % m_mod,  // TODO: refine away from %
             )
         });
         //
