@@ -1,7 +1,7 @@
 use rand_chacha::rand_core::SeedableRng;
 
-use fips203::{ml_kem_1024, ml_kem_512, ml_kem_768};
 use fips203::traits::{Decaps, Encaps, KeyGen, SerDes};
+use fips203::{ml_kem_1024, ml_kem_512, ml_kem_768};
 
 #[test]
 fn test_expected_flow_512() {

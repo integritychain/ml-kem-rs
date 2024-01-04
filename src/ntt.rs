@@ -1,5 +1,5 @@
-use crate::{Q, ZETA};
 use crate::types::Z256;
+use crate::{Q, ZETA};
 
 /// Algorithm 8 `NTT(f)` on page 22.
 /// Computes the NTT representation `f_hat` of the given polynomial f ∈ `R_q`.

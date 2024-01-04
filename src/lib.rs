@@ -89,9 +89,9 @@ macro_rules! functionality {
         const DV_256: usize = DV * 256;
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
-        use crate::SharedSecretKey;
-        use crate::traits::{Decaps, Encaps, KeyGen, SerDes};
         use crate::ml_kem::{ml_kem_decaps, ml_kem_encaps, ml_kem_key_gen};
+        use crate::traits::{Decaps, Encaps, KeyGen, SerDes};
+        use crate::SharedSecretKey;
 
         use rand_core::CryptoRngCore;
         use zeroize::{Zeroize, ZeroizeOnDrop};

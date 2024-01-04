@@ -76,6 +76,6 @@ pub trait SerDes {
     /// # Errors
     /// TKTK
     fn try_from_bytes(ba: Self::ByteArray) -> Result<Self, &'static str>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
 }

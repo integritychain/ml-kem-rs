@@ -3,8 +3,8 @@ use rand_core::CryptoRngCore;
 use crate::byte_fns::{byte_decode, byte_encode};
 use crate::helpers::{ensure, g, h, j};
 use crate::k_pke::k_pke_decrypt;
-use crate::SharedSecretKey;
 use crate::types::Z256;
+use crate::SharedSecretKey;
 
 use super::k_pke::{k_pke_encrypt, k_pke_key_gen};
 

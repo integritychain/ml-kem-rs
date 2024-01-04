@@ -7,8 +7,8 @@ use hex::decode;
 use rand_core::{CryptoRng, RngCore};
 use regex::Regex;
 
-use fips203::{ml_kem_1024, ml_kem_512, ml_kem_768};
 use fips203::traits::{Decaps, Encaps, KeyGen, SerDes};
+use fips203::{ml_kem_1024, ml_kem_512, ml_kem_768};
 
 // ----- CUSTOM RNG TO REPLAY VALUES -----
 
@@ -86,7 +86,7 @@ fn get_decaps_vec(filename: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
             .unwrap()
             .as_str(),
     )
-        .unwrap();
+    .unwrap();
     (dk, c, kprime)
 }
 
