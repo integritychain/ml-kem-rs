@@ -27,54 +27,53 @@ use crate::Q;
 // } // 5: return B
 
 
-/// Algorithm 3 `BytesToBits(B)` on page 18.
-/// Performs the inverse of `BitsToBytes`, converting a byte array into a bit array.
-///
-/// Input: byte array B ∈ B^ℓ <br>
-/// Output: bit array b ∈ {0,1}^{8·ℓ}
-#[allow(dead_code)]
-pub(crate) fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) -> Result<(), &'static str> {
-    ensure!(bits.len() % 8 == 0, "Alg3: bit length not multiple of 8");
-    // bit_array is multiple of 8
-    ensure!(bytes.len() * 8 == bits.len(), "Alg3: bit length not 8 * byte length"); // bit_array length is 8ℓ
-
-    // 1: for (i ← 0; i < ℓ; i ++)
-    for i in 0..bytes.len() {
-        //
-        let mut byte = bytes[i]; // for use in step 4 shifting
-
-        // 2: for ( j ← 0; j < 8; j ++)
-        for j in 0..8 {
-            //
-            // 3: b[8i + j] ← B[i] mod 2
-            bits[8 * i + j] = byte % 2;
-
-            // 4: B[i] ← ⌊B[i]/2⌋
-            byte /= 2;
-            //
-        } // 5: end for
-    } // 6: end for
-    Ok(())
-} // 7: return b
+// /// Algorithm 3 `BytesToBits(B)` on page 18.
+// /// Performs the inverse of `BitsToBytes`, converting a byte array into a bit array.
+// ///
+// /// Input: byte array B ∈ B^ℓ <br>
+// /// Output: bit array b ∈ {0,1}^{8·ℓ}
+// pub(crate) fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) -> Result<(), &'static str> {
+//     ensure!(bits.len() % 8 == 0, "Alg3: bit length not multiple of 8");
+//     // bit_array is multiple of 8
+//     ensure!(bytes.len() * 8 == bits.len(), "Alg3: bit length not 8 * byte length"); // bit_array length is 8ℓ
+//
+//     // 1: for (i ← 0; i < ℓ; i ++)
+//     for i in 0..bytes.len() {
+//         //
+//         let mut byte = bytes[i]; // for use in step 4 shifting
+//
+//         // 2: for ( j ← 0; j < 8; j ++)
+//         for j in 0..8 {
+//             //
+//             // 3: b[8i + j] ← B[i] mod 2
+//             bits[8 * i + j] = byte % 2;
+//
+//             // 4: B[i] ← ⌊B[i]/2⌋
+//             byte /= 2;
+//             //
+//         } // 5: end for
+//     } // 6: end for
+//     Ok(())
+// } // 7: return b
 
 /// Algorithm 4 `ByteEncode<d>(F)` on page 19.
 /// Encodes an array of d-bit integers into a byte array, for 1 ≤ d ≤ 12.
 ///
 /// Input: integer array `F ∈ Z^256_m`, where `m = 2^d if d < 12` and `m = q if d = 12` <br>
 /// Output: byte array B ∈ B^{32d}
-pub(crate) fn byte_encode<const D: usize, const D_256: usize>(
-    integers_f: &[Z256; 256], bytes_b: &mut [u8],
+pub(crate) fn byte_encode(
+    d: u32, integers_f: &[Z256; 256], bytes_b: &mut [u8],
 ) -> Result<(), &'static str> {
     let mut temp = 0u64;
     let mut bit_index = 0;
     let mut byte_index = 0;
-    let m = if D < 12 { 2u64.pow(D as u32) } else { Q as u64 };
+    let m = if d < 12 { 2u64.pow(d) } else { Q as u64 };
     for coeff in integers_f {
         let coeff = coeff.get_u16() as u64; //% Q as u16) as u64;
         ensure!(coeff <= m, "Alg4: Coeff out of range");
-        let coeff = coeff & (2u64.pow(D as u32) - 1);
+        let coeff = coeff & (2u64.pow(d) - 1);
         temp |= coeff << bit_index;
-        bit_index += D;
+        bit_index += d as usize;
         while bit_index > 7 {
             bytes_b[byte_index] = temp as u8;
             temp >>= 8;
@@ -135,10 +134,10 @@ pub(crate) fn byte_encode<const D: usize, const D_256: usize>(
 ///
 /// Input: byte array B ∈ B^{32d} <br>
 /// Output: integer array `F ∈ Z^256_m`, where `m = 2^d if d < 12` and `m = q if d = 12`
-pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
+pub(crate) fn byte_decode(d: u32,
     bytes_b: &[u8], integers_f: &mut [Z256; 256],
 ) -> Result<(), &'static str> {
-    let bitlen = D;
+    let bitlen = d;
     let mut temp = 0u64;
     let mut int_index = 0;
     let mut bit_index = 0;
@@ -146,7 +145,7 @@ pub(crate) fn byte_decode<const D: usize, const D_256: usize>(
         temp |= (*byte as u64) << bit_index;
         bit_index += 8;
         while bit_index >= bitlen {
-            let tmask = temp & (2u64.pow(bitlen as u32) - 1);
+            let tmask = temp & (2u64.pow(bitlen) - 1);
             integers_f[int_index] = Z256(tmask as u16);
             bit_index -= bitlen;
             temp >>= bitlen;
@@ -226,29 +225,29 @@ mod tests {
             let num_bytes = 32 * 11;
             let mut bytes2 = vec![0u8; num_bytes];
             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
-            byte_decode::<11, { 11 * 256 }>(&bytes1, &mut integer_array).unwrap();
-            byte_encode::<11, 2816>(&integer_array, &mut bytes2).unwrap();
+            byte_decode(11, &bytes1, &mut integer_array).unwrap();
+            byte_encode(11, &integer_array, &mut bytes2).unwrap();
             assert_eq!(bytes1, bytes2);
 
             let num_bytes = 32 * 10;
             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
             let mut bytes2 = vec![0u8; num_bytes];
-            byte_decode::<10, 2560>(&bytes1, &mut integer_array).unwrap();
-            byte_encode::<10, 2560>(&integer_array, &mut bytes2).unwrap();
+            byte_decode(10, &bytes1, &mut integer_array).unwrap();
+            byte_encode(10, &integer_array, &mut bytes2).unwrap();
             assert_eq!(bytes1, bytes2);
 
             let num_bytes = 32 * 5;
             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
             let mut bytes2 = vec![0u8; num_bytes];
-            byte_decode::<5, 1280>(&bytes1, &mut integer_array).unwrap();
-            byte_encode::<5, 1280>(&integer_array, &mut bytes2).unwrap();
+            byte_decode(5, &bytes1, &mut integer_array).unwrap();
+            byte_encode(5, &integer_array, &mut bytes2).unwrap();
             assert_eq!(bytes1, bytes2);
 
             let num_bytes = 32 * 4;
             let bytes1: Vec<u8> = (0..num_bytes).map(|_| rng.gen()).collect();
             let mut bytes2 = vec![0u8; num_bytes];
-            byte_decode::<4, 1024>(&bytes1, &mut integer_array).unwrap();
-            byte_encode::<4, 1024>(&integer_array, &mut bytes2).unwrap();
+            byte_decode(4, &bytes1, &mut integer_array).unwrap();
+            byte_encode(4, &integer_array, &mut bytes2).unwrap();
             assert_eq!(bytes1, bytes2);
         }
     }

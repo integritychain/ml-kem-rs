@@ -114,9 +114,10 @@ pub(crate) fn xof(rho: &[u8; 32], i: u8, j: u8) -> impl XofReader {
 
 
 /// Function G on page 17 (4.4).
-pub(crate) fn g(bytes: &[u8]) -> ([u8; 32], [u8; 32]) {
+pub(crate) fn g(bytes: &[&[u8]]) -> ([u8; 32], [u8; 32]) {
     let mut hasher = Sha3_512::new();
-    Digest::update(&mut hasher, bytes);
+    bytes.iter().for_each(|b| Digest::update(&mut hasher, b));
+    //Digest::update(&mut hasher, bytes);
     let digest = hasher.finalize();
     let mut a = [0u8; 32];
     let mut b = [0u8; 32];
@@ -138,9 +139,10 @@ pub(crate) fn h(bytes: &[u8]) -> [u8; 32] {
 
 /// Function J n page 17 (4.4).
 #[must_use]
-pub(crate) fn j(bytes: &[u8]) -> [u8; 32] {
+pub(crate) fn j(bytes: &[&[u8]]) -> [u8; 32] {
     let mut hasher = Shake256::default();
-    hasher.update(bytes);
+    bytes.iter().for_each(|b| hasher.update(b));
+    // hasher.update(bytes);
     let mut reader = hasher.finalize_xof();
     let mut result = [0u8; 32];
     reader.read(&mut result);
@@ -165,17 +167,17 @@ fn nearest(numerator: u32, denominator: u32) -> u16 {
 
 /// Compress<d> from page 18 (4.5).
 /// x → ⌈(2^d/q) · x⌋
-pub(crate) fn compress<const D: usize>(inout: &mut [Z256]) {
+pub(crate) fn compress(d: u32, inout: &mut [Z256]) {
     for x_ref in &mut *inout {
-        x_ref.0 = nearest(2u32.pow(u32::try_from(D).unwrap()) * u32::from(x_ref.0), Q);
+        x_ref.0 = nearest(2u32.pow(d) * u32::from(x_ref.0), Q);
     }
 }
 
 
 /// Decompress<d> from page 18 (4.6).
 /// y → ⌈(q/2^d) · y⌋ .
-pub(crate) fn decompress<const D: usize>(inout: &mut [Z256]) {
+pub(crate) fn decompress(d: u32, inout: &mut [Z256]) {
     for y_ref in &mut *inout {
-        y_ref.0 = nearest(Q * u32::from(y_ref.0), 2u32.pow(u32::try_from(D).unwrap()));
+        y_ref.0 = nearest(Q * u32::from(y_ref.0), 2u32.pow(d));
     }
 }

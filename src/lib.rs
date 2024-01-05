@@ -80,13 +80,8 @@ impl PartialEq for SharedSecretKey {
 // This common functionality is injected into each parameter set module
 macro_rules! functionality {
     () => {
-        // TODO: optimizing out the byte_fns will greatly simplify/remove these constants
         const ETA1_64: usize = ETA1 * 64; // Currently, Rust does not allow expressions involving
-        const ETA1_512: usize = ETA1 * 512; // constants in type expressions such as [u8, ETA1 * 64].
         const ETA2_64: usize = ETA2 * 64; // So this is handled manually...what a pain
-        const ETA2_512: usize = ETA2 * 512;
-        const DU_256: usize = DU * 256;
-        const DV_256: usize = DV * 256;
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
         use crate::ml_kem::{ml_kem_decaps, ml_kem_encaps, ml_kem_key_gen};
@@ -125,7 +120,7 @@ macro_rules! functionality {
                 rng: &mut impl CryptoRngCore,
             ) -> Result<(EncapsKey, DecapsKey), &'static str> {
                 let (mut ek, mut dk) = ([0u8; EK_LEN], [0u8; DK_LEN]);
-                ml_kem_key_gen::<K, ETA1, ETA1_64, ETA1_512>(rng, &mut ek, &mut dk)?;
+                ml_kem_key_gen::<K, ETA1, ETA1_64>(rng, &mut ek, &mut dk)?;
                 Ok((EncapsKey(ek), DecapsKey(dk)))
             }
         }
@@ -139,19 +134,9 @@ macro_rules! functionality {
                 &self, rng: &mut impl CryptoRngCore,
             ) -> Result<(Self::SharedSecretKey, Self::CipherText), &'static str> {
                 let mut ct = [0u8; CT_LEN];
-                let ssk = ml_kem_encaps::<
-                    K,
-                    ETA1,
-                    ETA1_64,
-                    ETA1_512,
-                    ETA2,
-                    ETA2_64,
-                    ETA2_512,
-                    DU,
-                    DU_256,
-                    DV,
-                    DV_256,
-                >(rng, &self.0, &mut ct)?;
+                let ssk = ml_kem_encaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(
+                    rng, &self.0, &mut ct,
+                )?;
                 Ok((ssk, CipherText(ct)))
             }
         }
@@ -162,21 +147,9 @@ macro_rules! functionality {
 
             ///TKTK
             fn try_decaps_vt(&self, ct: &CipherText) -> Result<SharedSecretKey, &'static str> {
-                let ssk = ml_kem_decaps::<
-                    K,
-                    ETA1,
-                    ETA1_64,
-                    ETA1_512,
-                    ETA2,
-                    ETA2_64,
-                    ETA2_512,
-                    DU,
-                    DU_256,
-                    DV,
-                    DV_256,
-                    J_LEN,
-                    CT_LEN,
-                >(&self.0, &ct.0);
+                let ssk = ml_kem_decaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV, J_LEN, CT_LEN>(
+                    &self.0, &ct.0,
+                );
                 ssk
             }
         }

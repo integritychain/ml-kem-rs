@@ -61,9 +61,7 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
 
 /// Algorithm 7 `SamplePolyCBDη(B)` on page 20.
 /// If the input is a stream of uniformly random bytes, outputs a sample from the distribution Dη (Rq ).
-pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(
-    byte_array_b: &[u8],
-) -> Result<[Z256; 256], &'static str> {
+pub fn sample_poly_cbd(eta: u32, byte_array_b: &[u8]) -> Result<[Z256; 256], &'static str> {
     let mut array_f: [Z256; 256] = [Z256(0); 256];
     let mut temp = 0;
     let mut int_index = 0;
@@ -71,14 +69,14 @@ pub fn sample_poly_cbd<const ETA: usize, const ETA_512: usize>(
     for byte in byte_array_b {
         temp |= (*byte as u64) << bit_index;
         bit_index += 8;
-        while bit_index >= 2* ETA {
-            let tmask_x = temp & (2u64.pow(ETA as u32) - 1);
+        while bit_index >= 2 * (eta as usize) {
+            let tmask_x = temp & (2u64.pow(eta) - 1);
             let x = (tmask_x as u8).count_ones();
-            let tmask_y = (temp >> ETA) & (2u64.pow(ETA as u32) - 1);
+            let tmask_y = (temp >> eta) & (2u64.pow(eta) - 1);
             let y = (tmask_y as u8).count_ones();
             array_f[int_index] = Z256(x as u16).sub(Z256(y as u16));
-            bit_index -= 2*ETA;
-            temp >>= 2*ETA;
+            bit_index -= 2 * (eta as usize);
+            temp >>= 2 * (eta as usize);
             int_index += 1;
         }
     }

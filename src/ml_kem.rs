@@ -10,12 +10,7 @@ use super::k_pke::{k_pke_encrypt, k_pke_key_gen};
 
 /// Algorithm 15 `ML-KEM.KeyGen()` on page 29.
 /// Generates an encapsulation key and a corresponding decapsulation key.
-pub(crate) fn ml_kem_key_gen<
-    const K: usize,
-    const ETA1: usize,
-    const ETA1_64: usize,
-    const ETA1_512: usize,
->(
+pub(crate) fn ml_kem_key_gen<const K: usize, const ETA1: usize, const ETA1_64: usize>(
     rng: &mut impl CryptoRngCore, ek: &mut [u8], dk: &mut [u8],
 ) -> Result<(), &'static str> {
     // Output: Encapsulation key ek ∈ B^{384k+32}
@@ -30,7 +25,7 @@ pub(crate) fn ml_kem_key_gen<
 
     // 2: (ek_{PKE}, dk_{PKE}) ← K-PKE.KeyGen()     ▷ run key generation for K-PKE
     let p1 = 384 * K;
-    k_pke_key_gen::<K, ETA1, ETA1_64, ETA1_512>(rng, ek, &mut dk[..p1])?; // 3: ek ← ekPKE
+    k_pke_key_gen::<K, ETA1, ETA1_64>(rng, ek, &mut dk[..p1])?; // 3: ek ← ekPKE
 
     // 4: dk ← (dkPKE ∥ek∥H(ek)∥z)  (first concat element is done above alongside ek)
     let h_ek = h(ek);
@@ -51,14 +46,10 @@ pub(crate) fn ml_kem_encaps<
     const K: usize,
     const ETA1: usize,
     const ETA1_64: usize,
-    const ETA1_512: usize,
     const ETA2: usize,
     const ETA2_64: usize,
-    const ETA2_512: usize,
     const DU: usize,
-    const DU_256: usize,
     const DV: usize,
-    const DV_256: usize,
 >(
     rng: &mut impl CryptoRngCore, ek: &[u8], ct: &mut [u8],
 ) -> Result<SharedSecretKey, &'static str> {
@@ -72,8 +63,8 @@ pub(crate) fn ml_kem_encaps<
     let mut ek_hat = [Z256(0); 256];
     for i in 0..K {
         let mut ek_tilde = [0u8; 384];
-        byte_decode::<12, { 12 * 256 }>(&ek[384 * i..384 * (i + 1)], &mut ek_hat)?;
-        byte_encode::<12, { 384 * 8 }>(&ek_hat, &mut ek_tilde)?;
+        byte_decode(12, &ek[384 * i..384 * (i + 1)], &mut ek_hat)?;
+        byte_encode(12, &ek_hat, &mut ek_tilde)?;
         ensure!(ek_tilde == ek[384 * i..384 * (i + 1)], "Alg16: len check!");
     }
 
@@ -83,15 +74,14 @@ pub(crate) fn ml_kem_encaps<
 
     // 2: (K, r) ← G(m∥H(ek))       ▷ derive shared secret key K and randomness r
     let h_ek = h(ek);
-    let mut g_input = [0u8; 64];
-    g_input[0..32].copy_from_slice(&m);
-    g_input[32..64].copy_from_slice(&h_ek);
-    let (k, r) = g(&g_input);
+    // let mut g_input = [0u8; 64];
+    // g_input[0..32].copy_from_slice(&m);
+    // g_input[32..64].copy_from_slice(&h_ek);
+    // let (k, r) = g(&g_input);
+    let (k, r) = g(&[&m, &h_ek]);
 
     // 3: 3: c ← K-PKE.Encrypt(ek, m, r)        ▷ encrypt m using K-PKE with randomness r
-    k_pke_encrypt::<K, ETA1, ETA1_64, ETA1_512, ETA2, ETA2_64, ETA2_512, DU, DU_256, DV, DV_256>(
-        ek, &m, &r, ct,
-    )?;
+    k_pke_encrypt::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(ek, &m, &r, ct)?;
 
     // 4: return (K, c)  (note: ct is mutable input)
     Ok(SharedSecretKey(k))
@@ -105,14 +95,10 @@ pub(crate) fn ml_kem_decaps<
     const K: usize,
     const ETA1: usize,
     const ETA1_64: usize,
-    const ETA1_512: usize,
     const ETA2: usize,
     const ETA2_64: usize,
-    const ETA2_512: usize,
     const DU: usize,
-    const DU_256: usize,
     const DV: usize,
-    const DV_256: usize,
     const J_LEN: usize,
     const CT_LEN: usize,
 >(
@@ -147,24 +133,24 @@ pub(crate) fn ml_kem_decaps<
     let z = &dk[768 * K + 64..768 * K + 96];
 
     // 5: m′ ← K-PKE.Decrypt(dkPKE,c)
-    let m_prime = k_pke_decrypt::<K, DU, DU_256, DV, DV_256>(dk_pke, ct)?;
+    let m_prime = k_pke_decrypt::<K, DU, DV>(dk_pke, ct)?;
 
     // 6: (K′, r′) ← G(m′ ∥ h)
-    let mut g_input = [0u8; 32 + 32];
-    g_input[0..32].copy_from_slice(&m_prime);
-    g_input[32..64].copy_from_slice(h);
-    let (mut k_prime, r_prime) = g(&g_input);
+    // let mut g_input = [0u8; 32 + 32];
+    // g_input[0..32].copy_from_slice(&m_prime);
+    // g_input[32..64].copy_from_slice(h);
+    let (mut k_prime, r_prime) = g(&[&m_prime, &h]);
 
     // 7: K̄ ← J(z∥c, 32)
     let mut j_input = [0u8; J_LEN];
     debug_assert_eq!(j_input.len(), 32 + ct.len());
     j_input[0..32].copy_from_slice(z);
     j_input[32..32 + ct.len()].copy_from_slice(ct);
-    let k_bar = j(&j_input);
+    let k_bar = j(&[&z, &ct]);
 
     // 8: c′ ← K-PKE.Encrypt(ekPKE , m′ , r′ )      ▷ re-encrypt using the derived randomness r′
     let mut c_prime = [0u8; CT_LEN];
-    k_pke_encrypt::<K, ETA1, ETA1_64, ETA1_512, ETA2, ETA2_64, ETA2_512, DU, DU_256, DV, DV_256>(
+    k_pke_encrypt::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV>(
         ek_pke,
         &m_prime,
         &r_prime,

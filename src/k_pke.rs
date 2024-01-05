@@ -14,12 +14,7 @@ use crate::types::Z256;
 /// Output: encryption key `ekPKE ∈ B^{384*k+32}` <br>
 /// Output: decryption key `dkPKE ∈ B^{384*k}`
 #[allow(clippy::similar_names, clippy::module_name_repetitions)]
-pub fn k_pke_key_gen<
-    const K: usize,
-    const ETA1: usize,
-    const ETA1_64: usize,
-    const ETA1_512: usize,
->(
+pub fn k_pke_key_gen<const K: usize, const ETA1: usize, const ETA1_64: usize>(
     rng: &mut impl CryptoRngCore, ek_pke: &mut [u8], dk_pke: &mut [u8],
 ) -> Result<(), &'static str> {
     ensure!(ek_pke.len() == 384 * K + 32, "Alg12: ek_pke not 384 * K + 32");
@@ -31,7 +26,7 @@ pub fn k_pke_key_gen<
         .map_err(|_| "Alg12: random number generator failed")?;
 
     // 2: 2: (ρ, σ) ← G(d)             ▷ expand to two pseudorandom 32-byte seeds
-    let (rho, sigma) = g(&d);
+    let (rho, sigma) = g(&[&d]);
 
     // 3: 3: N ← 0
     let mut n = 0;
@@ -59,7 +54,7 @@ pub fn k_pke_key_gen<
     for i in 0..K {
         //
         // 10: s[i] ← SamplePolyCBDη1(PRFη1(σ, N))     ▷ s[i] ∈ Z^{256}_q sampled from CBD
-        s[i] = sample_poly_cbd::<ETA1, ETA1_512>(&prf::<ETA1_64>(&sigma, n))?;
+        s[i] = sample_poly_cbd(ETA1 as u32, &prf::<ETA1_64>(&sigma, n))?;
 
         // 11: N ← N +1
         n += 1;
@@ -73,7 +68,7 @@ pub fn k_pke_key_gen<
     for i in 0..K {
         //
         // 14: e[i] ← SamplePolyCBDη1(PRFη1(σ, N))     ▷ e[i] ∈ Z^{256}_q sampled from CBD
-        e[i] = sample_poly_cbd::<ETA1, ETA1_512>(&prf::<ETA1_64>(&sigma, n))?;
+        e[i] = sample_poly_cbd(ETA1 as u32, &prf::<ETA1_64>(&sigma, n))?;
 
         // 15: N ← N +1
         n += 1;
@@ -101,13 +96,13 @@ pub fn k_pke_key_gen<
 
     // 20: ek_{PKE} ← ByteEncode12(t̂)∥ρ        ▷ ByteEncode12 is run k times; include seed for Â
     for i in 0..K {
-        byte_encode::<12, 3072>(&t_hat[i], &mut ek_pke[i * 384..(i + 1) * 384])?;
+        byte_encode(12, &t_hat[i], &mut ek_pke[i * 384..(i + 1) * 384])?;
     }
     ek_pke[K * 384..].copy_from_slice(&rho);
 
     // 21: dk_{PKE} ← ByteEncode12(ŝ)          ▷ ByteEncode12 is run k times
     for i in 0..K {
-        byte_encode::<12, 3072>(&s_hat[i], &mut dk_pke[i * 384..(i + 1) * 384])?;
+        byte_encode(12, &s_hat[i], &mut dk_pke[i * 384..(i + 1) * 384])?;
     }
 
     // 22: return (ekPKE , dkPKE )
@@ -122,14 +117,10 @@ pub(crate) fn k_pke_encrypt<
     const K: usize,
     const ETA1: usize,
     const ETA1_64: usize,
-    const ETA1_512: usize,
     const ETA2: usize,
     const ETA2_64: usize,
-    const ETA2_512: usize,
     const DU: usize,
-    const DU_256: usize,
     const DV: usize,
-    const DV_256: usize,
 >(
     ek: &[u8], m: &[u8], randomness: &[u8; 32], ct: &mut [u8],
 ) -> Result<(), &'static str> {
@@ -141,11 +132,7 @@ pub(crate) fn k_pke_encrypt<
     ensure!(m.len() == 32, "Alg13: m len not 32");
     ensure!(randomness.len() == 32, "Alg13: randomness len not 32");
     ensure!(ETA1 * 64 == ETA1_64, "Alg13: const probs");
-    ensure!(ETA1 * 512 == ETA1_512, "Alg13: const probs");
     ensure!(ETA2 * 64 == ETA2_64, "Alg13: const probs");
-    ensure!(ETA2 * 512 == ETA2_512, "Alg13: const probs");
-    ensure!(DU * 256 == DU_256, "Alg13: const probs");
-    ensure!(DV * 256 == DV_256, "Alg13: const probs");
 
     // 1: N ← 0
     let mut n = 0;
@@ -153,7 +140,7 @@ pub(crate) fn k_pke_encrypt<
     // 2: t̂ ← ByteDecode12 (ekPKE [0 : 384k])
     let mut t_hat = [[Z256(0); 256]; K];
     for i in 0..K {
-        byte_decode::<12, { 12 * 256 }>(&ek[384 * i..384 * (i + 1)], &mut t_hat[i])?;
+        byte_decode(12, &ek[384 * i..384 * (i + 1)], &mut t_hat[i])?;
     }
 
     // 3: 3: ρ ← ekPKE [384k : 384k + 32]           ▷ extract 32-byte seed from ekPKE
@@ -183,7 +170,7 @@ pub(crate) fn k_pke_encrypt<
     for i in 0..K {
         //
         // 10: r[i] ← SamplePolyCBDη 1 (PRFη 1 (r, N))      ▷ r[i] ∈ Z^{256}_q sampled from CBD
-        r[i] = sample_poly_cbd::<ETA1, ETA1_512>(&prf::<ETA1_64>(randomness, n))?;
+        r[i] = sample_poly_cbd(ETA1 as u32, &prf::<ETA1_64>(randomness, n))?;
 
         // 11: N ← N +1
         n += 1;
@@ -197,7 +184,7 @@ pub(crate) fn k_pke_encrypt<
     for i in 0..K {
         //
         // 14: e1 [i] ← SamplePolyCBDη2(PRFη2(r, N))        ▷ e1 [i] ∈ Z^{256}_q sampled from CBD
-        e1[i] = sample_poly_cbd::<ETA2, ETA2_512>(&prf::<ETA2_64>(randomness, n))?;
+        e1[i] = sample_poly_cbd(ETA2 as u32, &prf::<ETA2_64>(randomness, n))?;
 
         // 15: N ← N +1
         n += 1;
@@ -205,7 +192,7 @@ pub(crate) fn k_pke_encrypt<
     } // 16: end for
 
     // 17: 17: e2 ← SamplePolyCBDη(PRFη2(r, N))     ▷ sample e2 ∈ Z^{256}_q from CBD
-    let e2 = sample_poly_cbd::<ETA2, ETA2_512>(&prf::<ETA2_64>(randomness, n))?;
+    let e2 = sample_poly_cbd(ETA2 as u32, &prf::<ETA2_64>(randomness, n))?;
 
     // 18: 18: r̂ ← NTT(r)              ▷ NTT is run k times
     let mut r_hat = [[Z256(0); 256]; K];
@@ -223,8 +210,8 @@ pub(crate) fn k_pke_encrypt<
 
     // 20: µ ← Decompress1(ByteDecode1(m)))
     let mut mu = [Z256(0); 256];
-    byte_decode::<1, 256>(m, &mut mu)?;
-    decompress::<1>(&mut mu);
+    byte_decode(1, m, &mut mu)?;
+    decompress(1, &mut mu);
 
     // 21: v ← NTT−1 (t̂⊺ ◦ r̂) + e2 + µ        ▷ encode plaintext m into polynomial v.
     let mut v = ntt_inv(&dot_t_prod(&t_hat, &r_hat));
@@ -233,13 +220,13 @@ pub(crate) fn k_pke_encrypt<
     // 22: c1 ← ByteEncode_{du}(Compress_{du}(u))       ▷ ByteEncodedu is run k times
     let step = 32 * DU;
     for i in 0..K {
-        compress::<DU>(&mut u[i]);
-        byte_encode::<DU, DU_256>(&u[i], &mut ct[i * step..(i + 1) * step])?;
+        compress(DU as u32, &mut u[i]);
+        byte_encode(DU as u32, &u[i], &mut ct[i * step..(i + 1) * step])?;
     }
 
     // 23: c2 ← ByteEncode_{dv}(Compress_{dv}(v))
-    compress::<DV>(&mut v);
-    byte_encode::<DV, DV_256>(&v, &mut ct[K * step..(K * step + 32 * DV)])?;
+    compress(DV as u32, &mut v);
+    byte_encode(DV as u32, &v, &mut ct[K * step..(K * step + 32 * DV)])?;
 
     // 24: return c ← (c1 ∥ c2 )
     Ok(())
@@ -248,13 +235,7 @@ pub(crate) fn k_pke_encrypt<
 
 /// Algorithm 14 `K-PKE.Decrypt(dkPKE, c)` on page 28.
 /// Uses the decryption key to decrypt a ciphertext.
-pub(crate) fn k_pke_decrypt<
-    const K: usize,
-    const DU: usize,
-    const DU_256: usize,
-    const DV: usize,
-    const DV_256: usize,
->(
+pub(crate) fn k_pke_decrypt<const K: usize, const DU: usize, const DV: usize>(
     dk: &[u8], ct: &[u8],
 ) -> Result<[u8; 32], &'static str> {
     // Input: decryption key dk_{PKE} ∈ B^{384*k}
@@ -262,8 +243,6 @@ pub(crate) fn k_pke_decrypt<
     // Output: message m ∈ B^{32}
     ensure!(dk.len() == 384 * K, "Alg14: dk len not 384 * K");
     ensure!(ct.len() == 32 * (DU * K + DV), "Alg14: 32 * (DU * K + DV)");
-    ensure!(DU * 256 == DU_256, "Alg14: const probs");
-    ensure!(DV * 256 == DV_256, "Alg14: const probs");
 
     // 1: c1 ← c[0 : 32du k]
     let c1 = &ct[0..32 * DU * K];
@@ -274,19 +253,19 @@ pub(crate) fn k_pke_decrypt<
     // 3: 3: u ← Decompress_{du}(ByteDecode_{du}(c_1))      ▷ ByteDecode_{du} invoked k times
     let mut u = [[Z256(0); 256]; K];
     for i in 0..K {
-        byte_decode::<DU, DU_256>(&c1[32 * DU * i..32 * DU * (i + 1)], &mut u[i])?;
-        decompress::<DU>(&mut u[i]);
+        byte_decode(DU as u32,&c1[32 * DU * i..32 * DU * (i + 1)], &mut u[i])?;
+        decompress(DU as u32, &mut u[i]);
     }
 
     // 4: v ← Decompress_{dv}(ByteDecode_{dv}(c_2))
     let mut v = [Z256(0); 256];
-    byte_decode::<DV, DV_256>(c2, &mut v)?;
-    decompress::<DV>(&mut v);
+    byte_decode(DV as u32, c2, &mut v)?;
+    decompress(DV as u32, &mut v);
 
     // 5: s_hat ← ByteDecode_{12}(dk_{PKE{)
     let mut s_hat = [[Z256(0); 256]; K];
     for i in 0..K {
-        byte_decode::<12, { 12 * 256 }>(&dk[384 * i..384 * (i + 1)], &mut s_hat[i])?;
+        byte_decode(12, &dk[384 * i..384 * (i + 1)], &mut s_hat[i])?;
     }
 
     // 6: w ← v − NTT−1 (ŝ⊺ ◦ NTT(u))           ▷ NTT−1 and NTT invoked k times
@@ -305,9 +284,9 @@ pub(crate) fn k_pke_decrypt<
     }
 
     // 7: m ← ByteEncode1 (Compress1 (w))       ▷ decode plaintext m from polynomial v
-    compress::<1>(&mut w);
+    compress(1, &mut w);
     let mut m = [0u8; 32];
-    byte_encode::<1, 256>(&w, &mut m)?;
+    byte_encode(1, &w, &mut m)?;
 
     // 8: return m
     Ok(m)
