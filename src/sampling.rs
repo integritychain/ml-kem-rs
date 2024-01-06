@@ -1,9 +1,9 @@
 use sha3::digest::XofReader;
 
+use crate::Q;
 //use crate::byte_fns::bytes_to_bits;
 //use crate::helpers::ensure;
 use crate::types::Z256;
-use crate::Q;
 
 /// Algorithm 6 `SampleNTT(B)` on page 20.
 /// If the input is a stream of uniformly random bytes, the output is a uniformly random element of `T_q`.
@@ -61,6 +61,7 @@ pub fn sample_ntt(mut byte_stream_b: impl XofReader) -> [Z256; 256] {
 
 /// Algorithm 7 `SamplePolyCBDη(B)` on page 20.
 /// If the input is a stream of uniformly random bytes, outputs a sample from the distribution Dη (Rq ).
+#[allow(clippy::unnecessary_wraps)]  // TODO: revisit
 pub fn sample_poly_cbd(eta: u32, byte_array_b: &[u8]) -> Result<[Z256; 256], &'static str> {
     let mut array_f: [Z256; 256] = [Z256(0); 256];
     let mut temp = 0;

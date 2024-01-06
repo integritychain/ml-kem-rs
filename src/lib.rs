@@ -2,6 +2,9 @@
 #![deny(clippy::pedantic)]
 #![deny(warnings)]
 #![deny(missing_docs)]
+#![allow(clippy::cast_lossless)] // TODO
+#![allow(clippy::cast_possible_truncation)] // TODO
+
 #![doc = include_str!("../README.md")]
 
 /// Implements FIPS 203 draft Module-Lattice-based Key-Encapsulation Mechanism Standard.
@@ -9,6 +12,8 @@
 //
 // Supports automatically clearing sensitive data on drop
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+use crate::traits::SerDes;
 
 // Functionality map per FIPS 203 draft
 //
@@ -44,7 +49,7 @@ mod ntt;
 mod sampling;
 mod types;
 
-/// TKTK
+/// All functionality is covered by traits, such that consumers can utilize trait objects as desired.
 pub mod traits;
 
 // Relevant to all parameter sets
@@ -53,15 +58,18 @@ const Q: u32 = 3329;
 const ZETA: u32 = 17;
 const SSK_LEN: usize = 32;
 
-// Relevant to all parameter sets
-/// The (opaque) secret key that can be deserialized by each party.
+/// The (opaque) secret key that can be de/serialized by each party.
 #[derive(Clone, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct SharedSecretKey([u8; SSK_LEN]);
 
-impl SharedSecretKey {
-    /// The `to_bytes` function deserializes a shared secret key into a byte array.
-    #[must_use]
-    pub fn into_bytes(self) -> [u8; SSK_LEN] { self.0 }
+impl SerDes for SharedSecretKey {
+    type ByteArray = [u8; SSK_LEN];
+
+    fn into_bytes(self) -> Self::ByteArray { self.0 }
+
+    fn try_from_bytes(skk: Self::ByteArray) -> Result<Self, &'static str> {
+        Ok(SharedSecretKey(skk))
+    }
 }
 
 
@@ -80,8 +88,8 @@ impl PartialEq for SharedSecretKey {
 // This common functionality is injected into each parameter set module
 macro_rules! functionality {
     () => {
-        const ETA1_64: usize = ETA1 * 64; // Currently, Rust does not allow expressions involving
-        const ETA2_64: usize = ETA2 * 64; // So this is handled manually...what a pain
+        const ETA1_64: usize = ETA1 * 64;  // Currently, Rust does not allow expressions involving constants...
+        const ETA2_64: usize = ETA2 * 64;  // ...so these are handled manually.
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
         use crate::byte_fns::byte_decode;
@@ -89,19 +97,18 @@ macro_rules! functionality {
         use crate::traits::{Decaps, Encaps, KeyGen, SerDes};
         use crate::types::Z256;
         use crate::SharedSecretKey;
-
         use rand_core::CryptoRngCore;
         use zeroize::{Zeroize, ZeroizeOnDrop};
 
-        /// Correctly sized encapsulation key specific to the target parameter set.
+        /// Correctly sized encapsulation key specific to the target security parameter set.
         #[derive(Clone, Zeroize, ZeroizeOnDrop)]
         pub struct EncapsKey([u8; EK_LEN]);
 
-        /// Correctly sized decapsulation key specific to the target parameter set.
+        /// Correctly sized decapsulation key specific to the target security parameter set.
         #[derive(Clone, Zeroize, ZeroizeOnDrop)]
         pub struct DecapsKey([u8; DK_LEN]);
 
-        /// Correctly sized ciphertext specific to the target parameter set.
+        /// Correctly sized ciphertext specific to the target security parameter set.
         #[derive(Clone, Zeroize, ZeroizeOnDrop)]
         pub struct CipherText([u8; CT_LEN]);
 
@@ -117,7 +124,6 @@ macro_rules! functionality {
             type DecapsKey = DecapsKey;
             type EncapsKey = EncapsKey;
 
-            /// TKTK
             fn try_keygen_with_rng_vt(
                 rng: &mut impl CryptoRngCore,
             ) -> Result<(EncapsKey, DecapsKey), &'static str> {
@@ -131,7 +137,6 @@ macro_rules! functionality {
             type CipherText = CipherText;
             type SharedSecretKey = SharedSecretKey;
 
-            /// TKTK
             fn try_encaps_with_rng_vt(
                 &self, rng: &mut impl CryptoRngCore,
             ) -> Result<(Self::SharedSecretKey, Self::CipherText), &'static str> {
@@ -147,7 +152,6 @@ macro_rules! functionality {
             type CipherText = CipherText;
             type SharedSecretKey = SharedSecretKey;
 
-            ///TKTK
             fn try_decaps_vt(&self, ct: &CipherText) -> Result<SharedSecretKey, &'static str> {
                 let ssk = ml_kem_decaps::<K, ETA1, ETA1_64, ETA2, ETA2_64, DU, DV, J_LEN, CT_LEN>(
                     &self.0, &ct.0,
@@ -176,7 +180,7 @@ macro_rules! functionality {
             type ByteArray = [u8; DK_LEN];
 
             fn try_from_bytes(dk: Self::ByteArray) -> Result<Self, &'static str> {
-                // TODO: validation here
+                // TODO: additional validation here
                 Ok(DecapsKey(dk))
             }
 
@@ -187,7 +191,7 @@ macro_rules! functionality {
             type ByteArray = [u8; CT_LEN];
 
             fn try_from_bytes(ct: Self::ByteArray) -> Result<Self, &'static str> {
-                // TODO: validation here
+                // TODO: additional validation here
                 Ok(CipherText(ct))
             }
 
@@ -197,18 +201,21 @@ macro_rules! functionality {
 }
 
 
-///  ML-KEM-512 is claimed to be in security category 1, see table 2 & 3 on page 33.
+/// Functionality for the ML-KEM-512 security parameter set, which is claimed to be in security category 1, see
+/// table 2 & 3 on page 33 of spec.
 #[cfg(feature = "ml-kem-512")]
 pub mod ml_kem_512 {
     //!
     //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
     //!
     //! Typical usage flow entails:
-    //! 1. The originator runs `key_gen()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
-    //! 2. The originator deserializes the encaps key via `encapsKey.to_bytes()` and sends to the remote party.
-    //! 3. The remote party serializes the bytes via `new_ek(<bytes>)` to get the shared secret key `ssk` and ciphertext `cipherText`.
-    //! 4. The remote party deserializes the cipertext via `cipherText.to_bytes()` and sends to the originator.
-    //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
+    //! 1. The originator runs `try_keygen_vt()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
+    //! 2. The originator serializes the encaps key via `encapsKey.into_bytes()` and sends to the remote party.
+    //! 3. The remote party deserializes the bytes via `try_from_bytes(<bytes>)` and runs `try_encaps_vt()` to get the
+    //!    shared secret key `ssk` and ciphertext `cipherText`.
+    //! 4. The remote party serializes the cipertext via `cipherText.into_bytes()` and sends to the originator.
+    //! 5. The originator deserializes the ciphertext via `try_from_bytes(<bytes>)` then
+    //!    runs `decapsKey.try_decaps_vt(cipherText)` to the get shared secret ket `ssk`.
     //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
 
     const K: usize = 2;
@@ -220,23 +227,25 @@ pub mod ml_kem_512 {
     const DK_LEN: usize = 1632;
     const CT_LEN: usize = 768;
 
-
     functionality!();
 }
 
 
-/// ML-KEM-768 is claimed to be in security category 3, see table 2 & 3 on page 33.
+/// Functionality for the ML-KEM-768 security parameter set, which is claimed to be in security category 3, see
+/// table 2 & 3 on page 33 of spec.
 #[cfg(feature = "ml-kem-768")]
 pub mod ml_kem_768 {
     //!
     //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
     //!
     //! Typical usage flow entails:
-    //! 1. The originator runs `key_gen()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
-    //! 2. The originator deserializes the encaps key via `encapsKey.to_bytes()` and sends to the remote party.
-    //! 3. The remote party serializes the bytes via `new_ek(<bytes>)` to get the shared secret key `ssk` and ciphertext `cipherText`.
-    //! 4. The remote party deserializes the cipertext via `cipherText.to_bytes()` and sends to the originator.
-    //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
+    //! 1. The originator runs `try_keygen_vt()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
+    //! 2. The originator serializes the encaps key via `encapsKey.into_bytes()` and sends to the remote party.
+    //! 3. The remote party deserializes the bytes via `try_from_bytes(<bytes>)` and runs `try_encaps_vt()` to get the
+    //!    shared secret key `ssk` and ciphertext `cipherText`.
+    //! 4. The remote party serializes the cipertext via `cipherText.into_bytes()` and sends to the originator.
+    //! 5. The originator deserializes the ciphertext via `try_from_bytes(<bytes>)` then
+    //!    runs `decapsKey.try_decaps_vt(cipherText)` to the get shared secret ket `ssk`.
     //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
 
     const K: usize = 3;
@@ -259,11 +268,13 @@ pub mod ml_kem_1024 {
     //! See <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf>
     //!
     //! Typical usage flow entails:
-    //! 1. The originator runs `key_gen()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
-    //! 2. The originator deserializes the encaps key via `encapsKey.to_bytes()` and sends to the remote party.
-    //! 3. The remote party serializes the bytes via `new_ek(<bytes>)` to get the shared secret key `ssk` and ciphertext `cipherText`.
-    //! 4. The remote party deserializes the cipertext via `cipherText.to_bytes()` and sends to the originator.
-    //! 5. The originator serializes the ciphertext via `new_ct(<bytes>)` then runs `decapsKey.decaps(cipherText)` to the get shared secret ket `ssk`.
+    //! 1. The originator runs `try_keygen_vt()` to get an encaps key `encapsKey` and decaps key `decapsKey`.
+    //! 2. The originator serializes the encaps key via `encapsKey.into_bytes()` and sends to the remote party.
+    //! 3. The remote party deserializes the bytes via `try_from_bytes(<bytes>)` and runs `try_encaps_vt()` to get the
+    //!    shared secret key `ssk` and ciphertext `cipherText`.
+    //! 4. The remote party serializes the cipertext via `cipherText.into_bytes()` and sends to the originator.
+    //! 5. The originator deserializes the ciphertext via `try_from_bytes(<bytes>)` then
+    //!    runs `decapsKey.try_decaps_vt(cipherText)` to the get shared secret ket `ssk`.
     //! 6. Both the originator and remote party now have the same shared secret key `ssk`.
 
     const K: usize = 4;
