@@ -253,7 +253,7 @@ pub(crate) fn k_pke_decrypt<const K: usize, const DU: usize, const DV: usize>(
     // 3: 3: u ← Decompress_{du}(ByteDecode_{du}(c_1))      ▷ ByteDecode_{du} invoked k times
     let mut u = [[Z256(0); 256]; K];
     for i in 0..K {
-        byte_decode(DU as u32,&c1[32 * DU * i..32 * DU * (i + 1)], &mut u[i])?;
+        byte_decode(DU as u32, &c1[32 * DU * i..32 * DU * (i + 1)], &mut u[i])?;
         decompress(DU as u32, &mut u[i]);
     }
 

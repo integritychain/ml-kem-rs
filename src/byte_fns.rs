@@ -1,6 +1,6 @@
 use crate::helpers::ensure;
-use crate::types::Z256;
 use crate::Q;
+use crate::types::Z256;
 
 // /// Algorithm 2 `BitsToBytes(b)` on page 17.
 // /// Converts a bit string (of length a multiple of eight) into an array of bytes.
@@ -134,8 +134,8 @@ pub(crate) fn byte_encode(
 ///
 /// Input: byte array B ∈ B^{32d} <br>
 /// Output: integer array `F ∈ Z^256_m`, where `m = 2^d if d < 12` and `m = q if d = 12`
-pub(crate) fn byte_decode(d: u32,
-    bytes_b: &[u8], integers_f: &mut [Z256; 256],
+pub(crate) fn byte_decode(
+    d: u32, bytes_b: &[u8], integers_f: &mut [Z256; 256],
 ) -> Result<(), &'static str> {
     let bitlen = d;
     let mut temp = 0u64;
@@ -152,6 +152,8 @@ pub(crate) fn byte_decode(d: u32,
             int_index += 1;
         }
     }
+    let max = if d < 12 { 2u16.pow(d) } else { Q as u16 };
+    ensure!(integers_f.iter().all(|e| e.get_u16() < max), "Alg5: integers out of range");
     Ok(())
 }
 // #[allow(dead_code)]
@@ -202,7 +204,7 @@ mod tests {
     use crate::byte_fns::{byte_decode, byte_encode};
     use crate::types::Z256;
 
-    // #[test]
+// #[test]
     // fn test_bytes_and_bits() {
     //     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(123);
     //

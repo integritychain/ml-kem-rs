@@ -12,8 +12,8 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 // Functionality map per FIPS 203 draft
 //
-// Algorithm 2 BitsToBytes(b) on page 17                    --> byte_fns.rs
-// Algorithm 3 BytesToBits(B) on page 18                    --> byte_fns.rs
+// Algorithm 2 BitsToBytes(b) on page 17                    --> optimized out (byte_fns.rs)
+// Algorithm 3 BytesToBits(B) on page 18                    --> optimized out (byte_fns.rs)
 // Algorithm 4 ByteEncoded(F) on page 19                    --> byte_fns.rs
 // Algorithm 5 ByteDecoded(B) on page 19                    --> byte_fns.rs
 // Algorithm 6 SampleNTT(B) on page 20                      --> sampling.rs
@@ -29,7 +29,7 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 // Algorithm 16 ML-KEM.Encaps(ek) on page 30                --> ml_ke.rs
 // Algorithm 17 ML-KEM.Decaps(c,dk) on page 32              --> ml_kem.rs
 // PRF and XOF on page 16                                   --> helpers.rs
-// Three has functions: G, H, J on page 17                  --> helpers.rs
+// Three hash functions: G, H, J on page 17                 --> helpers.rs
 // Compress and Decompress on page 18                       --> helpers.rs
 //
 // The three parameter sets are modules in this file with injected macro code
@@ -84,8 +84,10 @@ macro_rules! functionality {
         const ETA2_64: usize = ETA2 * 64; // So this is handled manually...what a pain
         const J_LEN: usize = 32 + 32 * (DU * K + DV);
 
+        use crate::byte_fns::byte_decode;
         use crate::ml_kem::{ml_kem_decaps, ml_kem_encaps, ml_kem_key_gen};
         use crate::traits::{Decaps, Encaps, KeyGen, SerDes};
+        use crate::types::Z256;
         use crate::SharedSecretKey;
 
         use rand_core::CryptoRngCore;
@@ -159,7 +161,10 @@ macro_rules! functionality {
             type ByteArray = [u8; EK_LEN];
 
             fn try_from_bytes(ek: Self::ByteArray) -> Result<Self, &'static str> {
-                // TODO: validation here
+                let mut ek_hat = [Z256(0); 256];
+                for i in 0..K {
+                    byte_decode(12, &ek[384 * i..384 * (i + 1)], &mut ek_hat)?;
+                }
                 Ok(EncapsKey(ek))
             }
 

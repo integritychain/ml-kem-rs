@@ -1,7 +1,7 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 
-use fips203::traits::{Decaps, Encaps, KeyGen};
 use fips203::{ml_kem_1024, ml_kem_512, ml_kem_768};
+use fips203::traits::{Decaps, Encaps, KeyGen};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     let (ek_512, dk_512) = ml_kem_512::KG::try_keygen_vt().unwrap();
@@ -29,19 +29,19 @@ criterion_main!(benches);
 
 /*
 
-cargo bench # As of 1-1-24
+$ cargo bench   # As of 1-6-24
 Intel® Core™ i7-7700K CPU @ 4.20GHz × 8
 
-ml_kem_512 KeyGen       time:   [63.821 µs 63.830 µs 63.839 µs]
-ml_kem_768 KeyGen       time:   [100.88 µs 100.89 µs 100.90 µs]
-ml_kem_1024 KeyGen      time:   [146.53 µs 146.61 µs 146.70 µs]
+ml_kem_512 KeyGen       time:   [38.781 µs 39.282 µs 39.905 µs]
+ml_kem_768 KeyGen       time:   [64.254 µs 64.558 µs 65.107 µs]
+ml_kem_1024 KeyGen      time:   [100.13 µs 100.80 µs 101.55 µs]
 
-ml_kem_512 Encaps       time:   [76.934 µs 76.948 µs 76.961 µs]
-ml_kem_768 Encaps       time:   [117.93 µs 118.01 µs 118.08 µs]
-ml_kem_1024 Encaps      time:   [168.68 µs 168.76 µs 168.85 µs]
+ml_kem_512 Encaps       time:   [43.175 µs 43.851 µs 44.658 µs]
+ml_kem_768 Encaps       time:   [68.038 µs 68.808 µs 69.817 µs]
+ml_kem_1024 Encaps      time:   [102.59 µs 102.95 µs 103.34 µs]
 
-ml_kem_512 Decaps       time:   [76.749 µs 76.887 µs 77.071 µs]
-ml_kem_768 Decaps       time:   [117.05 µs 117.34 µs 117.84 µs]
-ml_kem_1024 Decaps      time:   [167.51 µs 167.53 µs 167.57 µs]
+ml_kem_512 Decaps       time:   [54.167 µs 54.810 µs 55.564 µs]
+ml_kem_768 Decaps       time:   [84.112 µs 85.940 µs 87.994 µs]
+ml_kem_1024 Decaps      time:   [121.48 µs 122.99 µs 125.10 µs]
 
  */
